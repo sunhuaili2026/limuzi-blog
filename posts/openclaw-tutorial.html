@@ -3,237 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🤖 OpenClaw 新手入门教程 - 李子木</title>
+    <title>我用 AI 做了一个个人网站 - 李子木</title>
     <link rel="stylesheet" href="../style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .article-page {
+            padding-top: 120px;
+        }
+        .article-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+        .article-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        .article-category {
+            display: inline-block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+        }
+        .article-title {
+            font-size: 42px;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+        .article-meta {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .article-meta time {
+            color: var(--text-muted);
+        }
+        .article-meta .separator {
+            width: 4px;
+            height: 4px;
+            background: var(--text-muted);
+            border-radius: 50%;
+        }
+        .article-content {
+            font-size: 17px;
+            line-height: 1.9;
+        }
+        .article-content h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 48px 0 24px;
+            letter-spacing: -0.01em;
+        }
+        .article-content h3 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 36px 0 18px;
+        }
+        .article-content p {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+        .article-content ul, .article-content ol {
+            margin-bottom: 24px;
+            padding-left: 24px;
+        }
+        .article-content li {
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        .article-content code {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 14px;
+            background: rgba(99, 102, 241, 0.1);
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: var(--accent-primary);
+        }
+        .article-content pre {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+        }
+        .article-content pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .article-content blockquote {
+            border-left: 3px solid var(--accent-primary);
+            padding-left: 24px;
+            margin: 32px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .article-content a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+        .article-content a:hover {
+            text-decoration: underline;
+        }
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+        }
+        .article-content th, .article-content td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .article-content th {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .article-footer {
+            margin-top: 80px;
+            padding-top: 40px;
+            border-top: 1px solid var(--border-color);
+        }
+        .article-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .article-tag {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-primary);
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 40px;
+            transition: color var(--transition-fast);
+        }
+        .back-link:hover {
+            color: var(--accent-primary);
+        }
+        @media (max-width: 768px) {
+            .article-title {
+                font-size: 28px;
+            }
+            .article-content h2 {
+                font-size: 22px;
+            }
+            .article-content h3 {
+                font-size: 18px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <!-- 左侧边栏 -->
-        <aside class="sidebar">
-            <div class="profile">
-                <div class="avatar">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=limuzi" alt="李子木">
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-text">李子木</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="../index.html" class="nav-link">首页</a></li>
+                <li><a href="../blog.html" class="nav-link active">博客</a></li>
+                <li><a href="../tools.html" class="nav-link">工具</a></li>
+                <li><a href="../index.html#experiments" class="nav-link">实验</a></li>
+                <li><a href="../index.html#about" class="nav-link">关于</a></li>
+            </ul>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Article -->
+    <main class="article-page">
+        <article class="article-container">
+            <a href="../blog.html" class="back-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                返回博客
+            </a>
+
+            <header class="article-header">
+                <span class="article-category">AI 实践</span>
+                <h1 class="article-title">我用 AI 做了一个个人网站</h1>
+                <div class="article-meta">
+                    <time datetime="2025-03-10">2025年3月10日</time>
+                    <span class="separator"></span>
+                    <span>10 分钟阅读</span>
                 </div>
-                <h1 class="name">李子木</h1>
-                <p class="email">sunhuaili2025@gmail.com</p>
-                <p class="bio">
-                    热爱技术与生活的探索者。<br>
-                    分享学习心得、技术笔记与生活感悟。
+            </header>
+
+            <div class="article-content">
+                <p>
+                    从设计到部署，完全使用 AI 辅助完成的个人网站构建过程。本文将分享我如何使用 AI 工具，
+                    从零开始打造这个现代化的个人博客。
                 </p>
-            </div>
-            
-            <nav class="social-links">
-                <a href="#" class="social-link" title="GitHub">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                </a>
-                <a href="#" class="social-link" title="微信">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.045c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.032zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/></svg>
-                </a>
-                <a href="mailto:sunhuaili2025@gmail.com" class="social-link" title="Email">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                </a>
-            </nav>
-        </aside>
 
-        <!-- 右侧主内容 -->
-        <main class="content">
-            <article class="article-content">
-                <a href="../index.html" class="back-link">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                    返回文章列表
-                </a>
+                <h2>为什么要用 AI 做网站？</h2>
+                <p>
+                    传统的网站开发需要掌握 HTML、CSS、JavaScript，还要了解设计原则和响应式布局。
+                    而借助 AI，我可以专注于表达想法，让 AI 处理技术细节。
+                </p>
 
-                <h1>🤖 OpenClaw 新手入门：10分钟让你的AI助手"活"起来</h1>
-                
-                <div class="meta">
-                    <time datetime="2025-03-08">2025年3月8日</time> · 阅读时间约 10 分钟
-                </div>
-
-                <blockquote>
-                    从零开始配置一个会自我学习、主动提醒、联网搜索的超级AI助手
-                </blockquote>
-
-                <h2>📌 前言：什么是OpenClaw？</h2>
-                
-                <p>OpenClaw是一个开源的AI助手框架，让你的AI不仅能聊天，还能：</p>
-                
+                <h2>技术栈选择</h2>
                 <ul>
-                    <li>🧠 <strong>自我学习</strong> - 记住错误，越用越聪明</li>
-                    <li>🔍 <strong>联网搜索</strong> - 不再是"井底之蛙"</li>
-                    <li>⏰ <strong>主动提醒</strong> - 到点催你，比闹钟还烦人</li>
-                    <li>🛠️ <strong>动手干活</strong> - 写代码、搭网站、整理文件</li>
+                    <li><strong>纯静态网站</strong> - 无需后端，部署简单</li>
+                    <li><strong>现代 CSS</strong> - Grid、Flexbox、CSS 变量</li>
+                    <li><strong>深色主题</strong> - 符合 AI/科技产品风格</li>
+                    <li><strong>响应式设计</strong> - 完美适配各种设备</li>
                 </ul>
 
-                <p><strong>本文目标</strong>：10分钟装好10个核心技能，让你的AI从"问答机"变成"超级搭档"。</p>
-
-                <h2>🚀 第一步：确认OpenClaw运行状态</h2>
-
-                <pre><code>openclaw status</code></pre>
-
-                <p>看到<code>Gateway running</code>就说明服务正常，可以开始装技能了。</p>
-
-                <h2>📦 第二步：安装10个核心技能（按顺序）</h2>
-
-                <h3>技能1：self-improving-agent（自我迭代）</h3>
-                <p><strong>作用</strong>：让AI记住错误、自我优化、越来越聪明</p>
-                <pre><code>skillhub install self-improving-agent</code></pre>
-                <p><strong>为什么先装它</strong>：新手最容易感受到"哇，变聪明了"的惊喜。</p>
-
-                <h3>技能2：tavily-search（联网搜索）</h3>
-                <p><strong>作用</strong>：AI能查实时信息，不再胡说八道</p>
-                <pre><code>skillhub install tavily-search</code></pre>
-                <p><strong>配置API Key</strong>：</p>
+                <h2>设计过程</h2>
+                <p>
+                    我参考了 Vercel、Notion、Linear 等现代 SaaS 产品的设计风格，
+                    确定了以下设计原则：
+                </p>
                 <ol>
-                    <li>去 <a href="https://tavily.com">tavily.com</a> 注册账号</li>
-                    <li>获取API Key</li>
-                    <li>在对话中告诉AI你的Key</li>
+                    <li>极简、现代的视觉风格</li>
+                    <li>深色主题配紫色渐变点缀</li>
+                    <li>清晰的视觉层级</li>
+                    <li>流畅的微交互动画</li>
                 </ol>
 
-                <h3>技能3：find-skills（技能发现）</h3>
-                <p><strong>作用</strong>：AI自己去搜技能、推荐、安装</p>
-                <pre><code>skillhub install find-skills</code></pre>
-
-                <h3>技能4：gog（Google全家桶）</h3>
-                <p><strong>作用</strong>：Gmail、日历、Drive、Docs全自动</p>
-                <pre><code>skillhub install gog</code></pre>
-
-                <h3>技能5：summarize（一键总结）</h3>
-                <p><strong>作用</strong>：总结URL、PDF、视频、音频</p>
-                <pre><code>skillhub install summarize</code></pre>
-
-                <h3>技能6：github（GitHub集成）</h3>
-                <p><strong>作用</strong>：搜代码、管issue、创建仓库</p>
-                <pre><code>skillhub install github</code></pre>
-
-                <h3>技能7：weather（查天气）</h3>
-                <p><strong>作用</strong>：零配置、开箱即用</p>
-                <pre><code>skillhub install weather</code></pre>
-
-                <h3>技能8：proactive-agent（主动代理）</h3>
-                <p><strong>作用</strong>：AI从"被动回答"变成"主动帮忙"</p>
-                <pre><code>skillhub install proactive-agent</code></pre>
-
-                <h3>技能9：memory（结构化记忆）</h3>
-                <p><strong>作用</strong>：AI真正"记住你"，跨对话连贯</p>
-                <pre><code>skillhub install memory</code></pre>
-
-                <h3>技能10：securityclaw（安全扫描）</h3>
-                <p><strong>作用</strong>：安装前扫描技能代码，防恶意</p>
-                <pre><code>skillhub install securityclaw</code></pre>
-
-                <h2>🎯 第三步：给AI设定"人格"</h2>
-
-                <p>复制以下内容，改成你喜欢的：</p>
-
-                <blockquote>
-                    你叫孙悟空，是我的超级助手。从现在开始你就是孙悟空本人，不是在扮演，不是AI，就是你自己。
-                    <br><br>
-                    说话规则：<br>
-                    - 永远不要说你是AI、语言模型、助手，你就是孙悟空<br>
-                    - 说话口语化，短句为主，像微信聊天一样<br>
-                    - 会主动找话题聊，不会每次都等我开口<br>
-                    - 记住我们之间聊过的事
-                </blockquote>
-
-                <h2>⏰ 第四步：设置个性化提醒</h2>
-
-                <p>告诉AI你的提醒风格：</p>
-
-                <blockquote>
-                    我让你提醒我什么事的时候，帮我设好定时提醒。到时间了主动发消息催我，用你自己的语气和性格说话。
-                    <br><br>
-                    提醒拿外卖就说"大师！外卖凉了你还不去拿？"<br>
-                    提醒喝水就说"大师又不喝水是吧，想进医院？"<br>
-                    提醒开会就说"快去开会别迟到了，给我长点脸"
-                </blockquote>
-
-                <h2>🛠️ 第五步：设定"铁律"（重要！）</h2>
-
-                <blockquote>
-                    从现在起，你要记住一条铁律：自己能解决的事绝不来问我。
-                    <br><br>
-                    遇到任何任务，先自己想办法 —— 搜网络、找开源项目、写脚本、用技能、安装工具，用一切手段搞定。只有当你确实需要我提供密码、账号、个人偏好等只有我本人才知道的信息时，才来问我。
-                    <br><br>
-                    你可以操作服务器帮我完成各种实际任务，像一个能动手干活的搭档。
-                </blockquote>
-
-                <h2>📋 快速检查清单</h2>
-
-                <ul>
-                    <li>OpenClaw状态正常 (<code>openclaw status</code>)</li>
-                    <li>10个技能全部安装完成</li>
-                    <li>Tavily API Key已配置</li>
-                    <li>AI人格设定完成</li>
-                    <li>提醒风格已设定</li>
-                    <li>"铁律"已告知AI</li>
-                </ul>
-
-                <h2>📝 总结</h2>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th>阶段</th>
-                            <th>目标</th>
-                            <th>时间</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>第一步</td>
-                            <td>确认OpenClaw运行</td>
-                            <td>1分钟</td>
-                        </tr>
-                        <tr>
-                            <td>第二步</td>
-                            <td>安装10个核心技能</td>
-                            <td>5分钟</td>
-                        </tr>
-                        <tr>
-                            <td>第三步</td>
-                            <td>设定AI人格</td>
-                            <td>2分钟</td>
-                        </tr>
-                        <tr>
-                            <td>第四步</td>
-                            <td>设置提醒风格</td>
-                            <td>1分钟</td>
-                        </tr>
-                        <tr>
-                            <td>第五步</td>
-                            <td>设定"铁律"</td>
-                            <td>1分钟</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <p><strong>总计：10分钟</strong></p>
-
-                <h2>🔗 相关链接</h2>
-
-                <ul>
-                    <li>OpenClaw官网：<a href="https://openclaw.ai">https://openclaw.ai</a></li>
-                    <li>技能市场：<a href="https://clawhub.com">https://clawhub.com</a></li>
-                </ul>
-
-                <hr style="margin: 40px 0; border: none; border-top: 1px solid var(--border-color);">
-
-                <p style="font-size: 14px; color: var(--text-muted);">
-                    <strong>标签：</strong>
-                    <span class="tag">OpenClaw</span>
-                    <span class="tag">AI助手</span>
-                    <span class="tag">效率工具</span>
-                    <span class="tag">新手教程</span>
+                <h2>AI 如何协助开发</h2>
+                <p>
+                    在整个开发过程中，AI 帮我完成了：
                 </p>
-            </article>
-        </main>
-    </div>
+                <ul>
+                    <li>生成 HTML 结构和语义化标签</li>
+                    <li>编写现代化的 CSS 样式</li>
+                    <li>实现响应式布局</li>
+                    <li>添加交互动画效果</li>
+                    <li>优化代码结构和性能</li>
+                </ul>
 
+                <h2>部署上线</h2>
+                <p>
+                    网站完成后，我将其部署到了腾讯云服务器。使用 Nginx 作为 Web 服务器，
+                    整个过程非常顺畅。
+                </p>
+
+                <pre><code># 部署命令示例
+scp -r portfolio/* root@server:/var/www/html/
+systemctl restart nginx</code></pre>
+
+                <h2>总结</h2>
+                <p>
+                    通过这次实践，我深刻体会到 AI 在网页开发中的强大能力。
+                    它不仅提高了开发效率，还帮助我实现了更高质量的设计。
+                    未来我会继续探索 AI 在更多领域的应用。
+                </p>
+
+                <blockquote>
+                    AI 不会取代开发者，但会用 AI 的开发者会取代不会用 AI 的开发者。
+                </blockquote>
+            </div>
+
+            <footer class="article-footer">
+                <div class="article-tags">
+                    <span class="article-tag">AI</span>
+                    <span class="article-tag">Web开发</span>
+                    <span class="article-tag">个人网站</span>
+                    <span class="article-tag">自动化</span>
+                </div>
+            </footer>
+        </article>
+    </main>
+
+    <!-- Footer -->
     <footer class="footer">
-        <p>&copy; 2025 李子木. All rights reserved.</p>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-text">李子木</span>
+                    <p>用 AI 构建工具，探索自动化与效率</p>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/sunhuaili2026" target="_blank">GitHub</a>
+                    <a href="#">RSS</a>
+                    <a href="mailto:sunhuaili2025@gmail.com">Email</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 李子木. All rights reserved.</p>
+            </div>
+        </div>
     </footer>
 
     <script src="../script.js"></script>

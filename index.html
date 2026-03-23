@@ -3,72 +3,323 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>李子木 - 个人博客</title>
+    <title>李子木 - 用 AI 构建工具</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <!-- 左侧边栏 -->
-        <aside class="sidebar">
-            <div class="profile">
-                <div class="avatar">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=limuzi" alt="李子木">
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="nav-logo">
+                <span class="logo-icon">◆</span>
+                <span class="logo-text">李子木</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="/index.html" class="nav-link active">首页</a></li>
+                <li><a href="/blog.html" class="nav-link">博客</a></li>
+                <li><a href="/tools.html" class="nav-link">工具</a></li>
+                <li><a href="#about" class="nav-link">关于</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <span class="badge-dot"></span>
+                    探索 AI 与自动化
                 </div>
-                <h1 class="name">李子木</h1>
-                <p class="email">sunhuaili2025@gmail.com</p>
-                <p class="bio">
-                    热爱技术与生活的探索者。<br>
-                    分享学习心得、技术笔记与生活感悟。
+                <h1 class="hero-title">
+                    用 AI 构建工具
+                    <span class="gradient-text">探索自动化与效率系统</span>
+                </h1>
+                <p class="hero-subtitle">
+                    记录 AI 工具实践、自动化流程<br>
+                    以及效率工具探索
                 </p>
+                <div class="hero-cta">
+                    <a href="/blog.html" class="btn btn-primary">
+                        <span>阅读博客</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                    <a href="/tools.html" class="btn btn-secondary">
+                        <span>查看工具</span>
+                    </a>
+                </div>
             </div>
-            
-            <nav class="social-links">
-                <a href="#" class="social-link" title="GitHub">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                </a>
-                <a href="#" class="social-link" title="微信">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.045c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.032zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/></svg>
-                </a>
-                <a href="mailto:sunhuaili2025@gmail.com" class="social-link" title="Email">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                </a>
-            </nav>
-        </aside>
-
-        <!-- 右侧主内容 -->
-        <main class="content">
-            <header class="content-header">
-                <h2>文章</h2>
-                <span class="article-count">1 篇</span>
-            </header>
-
-            <div class="articles">
-                <article class="article">
-                    <div class="article-meta">
-                        <time datetime="2025-03-08">2025年3月8日</time>
+            <div class="hero-visual">
+                <div class="visual-card">
+                    <div class="card-header">
+                        <div class="card-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span class="card-title">AI Assistant</span>
                     </div>
-                    <h3 class="article-title">
-                        <a href="posts/openclaw-tutorial.html">🤖 OpenClaw 新手入门教程</a>
-                    </h3>
-                    <p class="article-excerpt">
-                        从零开始配置一个会自我学习、主动提醒、联网搜索的超级AI助手。10分钟装好10个核心技能，让你的AI从"问答机"变成"超级搭档"。
-                    </p>
-                    <div class="article-tags">
-                        <span class="tag">OpenClaw</span>
-                        <span class="tag">AI助手</span>
-                        <span class="tag">效率工具</span>
-                        <span class="tag">新手教程</span>
+                    <div class="card-content">
+                        <div class="code-line">
+                            <span class="code-prompt">$</span>
+                            <span class="code-text">openclaw status</span>
+                        </div>
+                        <div class="code-line output">
+                            <span class="code-comment">✓ Gateway running</span>
+                        </div>
+                        <div class="code-line">
+                            <span class="code-prompt">$</span>
+                            <span class="code-text">skillhub install tavily</span>
+                        </div>
+                        <div class="code-line output">
+                            <span class="code-comment">Installing...</span>
+                        </div>
+                        <div class="code-line">
+                            <span class="code-prompt">$</span>
+                            <span class="code-text typing">_</span>
+                        </div>
                     </div>
+                </div>
+                <div class="glow-effect"></div>
+            </div>
+        </div>
+        <a href="#exploration" class="scroll-indicator">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M19 12l-7 7-7-7"/>
+            </svg>
+        </a>
+    </section>
+
+    <!-- Exploration Section -->
+    <section class="section exploration" id="exploration">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">探索领域</span>
+                <h2 class="section-title">我在探索什么</h2>
+            </div>
+            <div class="exploration-grid">
+                <div class="exploration-card">
+                    <div class="card-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <h3>AI Tools</h3>
+                    <p>探索 AI 工具开发<br>Prompt 工程实践</p>
+                </div>
+                <div class="exploration-card">
+                    <div class="card-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <h3>Automation</h3>
+                    <p>自动化流程<br>工作流优化</p>
+                </div>
+                <div class="exploration-card">
+                    <div class="card-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </div>
+                    <h3>Productivity</h3>
+                    <p>效率工具<br>个人生产力系统</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tools Section -->
+    <section class="section tools" id="tools">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">项目展示</span>
+                <h2 class="section-title">我的工具</h2>
+            </div>
+            <div class="tools-grid">
+                <div class="tool-showcase-card">
+                    <div class="tool-header">
+                        <span class="tool-tag">Automation</span>
+                    </div>
+                    <h3>SmartCS</h3>
+                    <p>AI 客服冷启动分析工具</p>
+                    <a href="/tools/smartcs-coldstart/" class="tool-link">
+                        立即使用
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="tool-showcase-card">
+                    <div class="tool-header">
+                        <span class="tool-tag">Automation</span>
+                    </div>
+                    <h3>Automation Scripts</h3>
+                    <p>自动化脚本集合，简化重复性工作流程</p>
+                    <a href="#" class="tool-link">
+                        查看项目
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="tool-showcase-card">
+                    <div class="tool-header">
+                        <span class="tool-tag">AI Tool</span>
+                    </div>
+                    <h3>梦境解析</h3>
+                    <p>AI 驱动的梦境分析工具，深度解析梦境含义</p>
+                    <a href="/tools/dream-analysis.html" class="tool-link">
+                        立即使用
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Blog Section -->
+    <section class="section blog" id="blog">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">博客文章</span>
+                <h2 class="section-title">最新文章</h2>
+                <a href="/blog.html" class="section-link">
+                    查看全部
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="blog-grid">
+                <article class="blog-card">
+                    <div class="blog-meta">
+                        <time>2025年3月8日</time>
+                        <span class="blog-tag">AI</span>
+                    </div>
+                    <h3>我用 AI 做了一个个人网站</h3>
+                    <p>从设计到部署，全程使用 AI 辅助完成，记录整个开发过程...</p>
+                    <a href="/posts/openclaw-tutorial.html" class="blog-link">阅读文章</a>
+                </article>
+                <article class="blog-card">
+                    <div class="blog-meta">
+                        <time>2025年3月10日</time>
+                        <span class="blog-tag">教程</span>
+                    </div>
+                    <h3>使用 OpenClaw 构建个人网站</h3>
+                    <p>详细记录从零构建现代化个人网站，并部署 AI 工具的完整过程...</p>
+                    <a href="/posts/build-website-with-openclaw.html" class="blog-link">阅读文章</a>
+                </article>
+                <article class="blog-card">
+                    <div class="blog-meta">
+                        <time>2025年3月8日</time>
+                        <span class="blog-tag">自动化</span>
+                    </div>
+                    <h3>OpenClaw 自动化实践</h3>
+                    <p>分享我使用 OpenClaw 框架搭建个人 AI 助手的经验...</p>
+                    <a href="/posts/openclaw-tutorial.html" class="blog-link">阅读文章</a>
                 </article>
             </div>
-        </main>
-    </div>
+        </div>
+    </section>
 
+    <!-- About Section -->
+    <section class="section about" id="about">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text">
+                    <span class="section-label">关于我</span>
+                    <h2 class="section-title">你好，我是李子木</h2>
+                    <p>
+                        我在探索 AI 与自动化工具，并尝试用 AI 构建有用的工具。
+                        这个网站记录我的实践、学习笔记和工具实验。
+                    </p>
+                    <div class="about-links">
+                        <a href="https://github.com/sunhuaili2026" target="_blank" class="btn btn-outline">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            GitHub
+                        </a>
+                        <a href="mailto:sunhuaili2025@gmail.com" class="btn btn-outline">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                <polyline points="22,6 12,13 2,6"/>
+                            </svg>
+                            Email
+                        </a>
+                    </div>
+                </div>
+                <div class="about-visual">
+                    <div class="about-card">
+                        <div class="stat-row">
+                            <span class="stat-number">10+</span>
+                            <span class="stat-label">AI 工具</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-number">50+</span>
+                            <span class="stat-label">自动化脚本</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-number">∞</span>
+                            <span class="stat-label">探索中</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Subscribe Section -->
+    <section class="section subscribe" id="subscribe">
+        <div class="container">
+            <div class="subscribe-content">
+                <h2>获取最新文章</h2>
+                <p>订阅我的 newsletter，第一时间获取新文章和工具更新</p>
+                <form class="subscribe-form" onsubmit="event.preventDefault(); alert('感谢订阅！');">
+                    <input type="email" placeholder="输入你的邮箱" required>
+                    <button type="submit" class="btn btn-primary">
+                        订阅
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
     <footer class="footer">
-        <p>&copy; 2025 李子木. All rights reserved.</p>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-icon">◆</span>
+                    <span>李子木</span>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/sunhuaili2026" target="_blank">GitHub</a>
+                    <a href="#">RSS</a>
+                    <a href="mailto:sunhuaili2025@gmail.com">Email</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 李子木. All rights reserved.</p>
+            </div>
+        </div>
     </footer>
 
     <script src="script.js"></script>

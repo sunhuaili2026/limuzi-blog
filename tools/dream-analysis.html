@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>梦境解析 - 李子木</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .dream-tool {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .dream-input-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+        
+        .dream-input {
+            width: 100%;
+            min-height: 180px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s ease;
+        }
+        
+        .dream-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+        
+        .dream-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .dream-action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+        
+        .dream-action-btn:hover {
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .dream-action-btn.primary {
+            background: var(--accent-gradient);
+            border: none;
+        }
+        
+        .dream-action-btn.primary:hover {
+            box-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+        }
+        
+        .dream-action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .dream-result {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-top: 24px;
+            display: none;
+        }
+        
+        .dream-result.active {
+            display: block;
+            animation: fadeInUp 0.6s ease;
+        }
+        
+        .result-section {
+            margin-bottom: 24px;
+        }
+        
+        .result-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .result-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .result-content {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .dream-icon {
+            font-size: 24px;
+        }
+        
+        .section-label {
+            display: inline-block;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 13px;
+            color: var(--accent-primary);
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-icon">◆</span>
+                <span class="logo-text">李子木</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="../index.html" class="nav-link">首页</a></li>
+                <li><a href="../blog.html" class="nav-link">博客</a></li>
+                <li><a href="../tools.html" class="nav-link active">工具</a></li>
+                <li><a href="../index.html#about" class="nav-link">关于</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header" style="padding: 120px 0 40px;">
+        <div class="container">
+            <span class="section-label">AI 工具</span>
+            <h1 class="page-title" style="font-size: 36px; margin-bottom: 12px;">🌙 梦境解析</h1>
+            <p class="page-subtitle" style="font-size: 16px; color: var(--text-secondary);">探索梦境的奥秘，解析潜意识，生成梦境视觉化内容</p>
+        </div>
+    </section>
+
+    <!-- Dream Tool -->
+    <section class="section" style="padding-top: 0;">
+        <div class="container">
+            <div class="dream-tool">
+                <!-- 输入区域 -->
+                <div class="dream-input-section">
+                    <h2 style="margin-bottom: 16px; font-size: 18px; font-weight: 600;">描述你的梦境</h2>
+                    <textarea 
+                        class="dream-input" 
+                        id="dreamInput"
+                        placeholder="请详细描述你做的梦，包括场景、人物、情节、感受等。例如：
+
+我梦见自己在一个古老的城堡里，周围弥漫着紫色的雾气。我穿着白色的长裙，手里拿着一把发光的钥匙。城堡里有很多镜子，每个镜子里都有一个不同的我。我想找到出口，但每次打开门都会回到同一个房间..."
+                    ></textarea>
+                    
+                    <div class="dream-actions">
+                        <button class="dream-action-btn primary" onclick="analyzeDream()">
+                            <span>🔮</span>
+                            <span>解析梦境</span>
+                        </button>
+                        <button class="dream-action-btn" onclick="generateImage()">
+                            <span>🎨</span>
+                            <span>生成图片</span>
+                        </button>
+                        <button class="dream-action-btn" onclick="continueDream()">
+                            <span>✍️</span>
+                            <span>续写梦境</span>
+                        </button>
+                        <button class="dream-action-btn" onclick="generateVideo()">
+                            <span>🎬</span>
+                            <span>生成视频</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 结果区域 -->
+                <div class="dream-result" id="dreamResult">
+                    <!-- 解析结果 -->
+                    <div class="result-section" id="analysisSection" style="display: none;">
+                        <h3 class="result-title">
+                            <span>🔮</span>
+                            梦境解析
+                        </h3>
+                        <div class="result-content" id="analysisContent"></div>
+                    </div>
+
+                    <!-- 图片结果 -->
+                    <div class="result-section" id="imageSection" style="display: none;">
+                        <h3 class="result-title">
+                            <span>🎨</span>
+                            梦境图片
+                        </h3>
+                        <div class="result-content" id="imageContent"></div>
+                    </div>
+
+                    <!-- 续写结果 -->
+                    <div class="result-section" id="continueSection" style="display: none;">
+                        <h3 class="result-title">
+                            <span>✍️</span>
+                            梦境续写
+                        </h3>
+                        <div class="result-content" id="continueContent"></div>
+                    </div>
+
+                    <!-- 视频结果 -->
+                    <div class="result-section" id="videoSection" style="display: none;">
+                        <h3 class="result-title">
+                            <span>🎬</span>
+                            梦境视频
+                        </h3>
+                        <div class="result-content" id="videoContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-icon">◆</span>
+                    <span>李子木</span>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/sunhuaili2026" target="_blank">GitHub</a>
+                    <a href="#">RSS</a>
+                    <a href="mailto:sunhuaili2025@gmail.com">Email</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 李子木. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script>
+        const API_KEY = 'limuzi2025';
+        let currentDream = '';
+
+        async function callAPI(messages, model = 'deepseek-chat') {
+            const response = await fetch('/api/deepseek', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    password: API_KEY,
+                    model: model,
+                    messages: messages,
+                    temperature: 0.7
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('API 调用失败');
+            }
+            
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        async function analyzeDream() {
+            const input = document.getElementById('dreamInput').value.trim();
+            if (!input) {
+                alert('请先描述你的梦境');
+                return;
+            }
+            
+            currentDream = input;
+            const btn = event.target.closest('button');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> 正在解析...';
+            
+            try {
+                const result = await callAPI([
+                    {
+                        role: 'system',
+                        content: `你是一位资深梦境解析师，融合荣格心理学、精神分析和现代神经科学的专业知识。
+
+请按照以下结构解析梦境：
+
+【🔮 梦境核心主题】
+用一句话概括这个梦境的核心主题
+
+【🎭 关键元素解析】
+- 分析梦中 3-5 个关键元素的象征意义
+- 结合荣格原型理论和常见梦境符号学
+- 每个元素用 1-2 句话解释
+
+【💭 潜意识信息】
+- 这个梦可能反映的内心状态
+- 未满足的需求或压抑的情感
+- 当前生活阶段的心理特征
+
+【🌉 现实关联】
+- 可能与近期经历的关联
+- 工作/关系/成长方面的启示
+
+【✨ 建议与启示】
+- 具体可行的自我探索建议
+- 如果梦境反复出现的应对方法
+- 积极正面的成长方向
+
+注意：
+- 用温暖、共情的语气，像朋友间的深度对话
+- 避免绝对化表述，用"可能""或许"等开放性语言
+- 结合中国文化背景下的梦境理解
+- 长度控制在 400-600 字，分段清晰易读`
+                    },
+                    {
+                        role: 'user',
+                        content: `请解析这个梦境：${input}`
+                    }
+                ]);
+                
+                document.getElementById('analysisContent').textContent = result;
+                document.getElementById('analysisSection').style.display = 'block';
+                document.getElementById('dreamResult').classList.add('active');
+            } catch (error) {
+                alert('解析失败，请重试');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔮</span><span>解析梦境</span>';
+            }
+        }
+
+        async function generateImage() {
+            const input = document.getElementById('dreamInput').value.trim() || currentDream;
+            if (!input) {
+                alert('请先描述你的梦境');
+                return;
+            }
+            
+            const btn = event.target.closest('button');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> 正在生成...';
+            
+            try {
+                const prompt = await callAPI([
+                    {
+                        role: 'system',
+                        content: '你将根据用户的梦境描述，生成一个详细的 AI 绘画提示词（英文）。提示词应该包含：场景、氛围、色彩、风格、细节等。格式：A surreal dream scene with [detailed description], [atmosphere], [color palette], [art style], highly detailed, dreamlike quality.'
+                    },
+                    {
+                        role: 'user',
+                        content: `请为这个梦境生成绘画提示词：${input}`
+                    }
+                ]);
+                
+                document.getElementById('imageContent').innerHTML = `
+                    <p><strong>生成的绘画提示词：</strong></p>
+                    <p style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-top: 12px;">${prompt}</p>
+                    <p style="margin-top: 16px; color: var(--text-muted); font-size: 14px;">
+                        💡 提示：可以将此提示词复制到 AI 绘画工具（如 Midjourney、DALL-E 3、Stable Diffusion）中生成图片。
+                    </p>
+                `;
+                document.getElementById('imageSection').style.display = 'block';
+                document.getElementById('dreamResult').classList.add('active');
+            } catch (error) {
+                alert('生成失败，请重试');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🎨</span><span>生成图片</span>';
+            }
+        }
+
+        async function continueDream() {
+            const input = document.getElementById('dreamInput').value.trim() || currentDream;
+            if (!input) {
+                alert('请先描述你的梦境');
+                return;
+            }
+            
+            const btn = event.target.closest('button');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> 正在续写...';
+            
+            try {
+                const result = await callAPI([
+                    {
+                        role: 'system',
+                        content: '你是一位富有创造力的梦境故事作家。请根据用户描述的梦境，继续编写这个梦境故事，保持梦境的超现实、神秘感。续写内容应该：1.延续原有的氛围和风格 2.加入新的有趣元素 3.保持梦境的逻辑跳跃性 4.长度约 300-500 字。'
+                    },
+                    {
+                        role: 'user',
+                        content: `请续写这个梦境：${input}`
+                    }
+                ]);
+                
+                document.getElementById('continueContent').textContent = result;
+                document.getElementById('continueSection').style.display = 'block';
+                document.getElementById('dreamResult').classList.add('active');
+            } catch (error) {
+                alert('续写失败，请重试');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>✍️</span><span>续写梦境</span>';
+            }
+        }
+
+        async function generateVideo() {
+            const input = document.getElementById('dreamInput').value.trim() || currentDream;
+            if (!input) {
+                alert('请先描述你的梦境');
+                return;
+            }
+            
+            const btn = event.target.closest('button');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> 正在准备...';
+            
+            try {
+                const prompt = await callAPI([
+                    {
+                        role: 'system',
+                        content: '你将根据用户的梦境描述，生成一个详细的 AI 视频生成提示词（英文）。提示词应该包含：场景、动作、氛围、色彩、镜头运动、风格等。格式：A dreamlike video scene with [description], [camera movement], [atmosphere], [color grading], cinematic, surreal, ethereal quality.'
+                    },
+                    {
+                        role: 'user',
+                        content: `请为这个梦境生成视频提示词：${input}`
+                    }
+                ]);
+                
+                document.getElementById('videoContent').innerHTML = `
+                    <p><strong>生成的视频提示词：</strong></p>
+                    <p style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-top: 12px;">${prompt}</p>
+                    <p style="margin-top: 16px; color: var(--text-muted); font-size: 14px;">
+                        💡 提示：可以将此提示词复制到 AI 视频生成工具（如 Runway、Pika、Stable Video Diffusion）中生成视频。
+                    </p>
+                    <div style="margin-top: 24px; padding: 20px; background: rgba(99, 102, 241, 0.1); border-radius: 12px; border-left: 4px solid var(--accent-primary);">
+                        <p style="font-weight: 600; margin-bottom: 8px;">🎬 推荐的视频生成工具：</p>
+                        <ul style="color: var(--text-secondary); line-height: 2;">
+                            <li>Runway Gen-2: https://runwayml.com</li>
+                            <li>Pika Labs: https://pika.art</li>
+                            <li>Stable Video Diffusion</li>
+                            <li>Luma Dream Machine</li>
+                        </ul>
+                    </div>
+                `;
+                document.getElementById('videoSection').style.display = 'block';
+                document.getElementById('dreamResult').classList.add('active');
+            } catch (error) {
+                alert('生成失败，请重试');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🎬</span><span>生成视频</span>';
+            }
+        }
+    </script>
+</body>
+</html>

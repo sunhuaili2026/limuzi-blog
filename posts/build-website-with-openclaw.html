@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用 OpenClaw 构建个人网站与部署 AI 工具完整指南 - 李子木</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-icon">◆</span>
+                <span class="logo-text">李子木</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="../index.html" class="nav-link">首页</a></li>
+                <li><a href="../blog.html" class="nav-link active">博客</a></li>
+                <li><a href="../tools.html" class="nav-link">工具</a></li>
+                <li><a href="../index.html#experiments" class="nav-link">实验</a></li>
+                <li><a href="../index.html#about" class="nav-link">关于</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Article Header -->
+    <section class="page-header">
+        <div class="container">
+            <span class="section-label">博客文章</span>
+            <h1 class="page-title">使用 OpenClaw 构建个人网站与部署 AI 工具完整指南</h1>
+            <div class="article-meta-header">
+                <time>2025年3月10日</time>
+                <span class="reading-time">阅读时间约 15 分钟</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Article Content -->
+    <section class="section article-page">
+        <div class="container">
+            <article class="article-container">
+                <a href="../blog.html" class="back-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    返回文章列表
+                </a>
+
+                <div class="article-body">
+                    <p class="article-lead">
+                        本文详细记录了如何使用 OpenClaw 从零开始构建一个现代化的个人网站，并将 GitHub 项目部署为可在线使用的工具。整个过程展示了 AI 辅助开发的强大能力。
+                    </p>
+
+                    <h2>第一部分：个人网站构建</h2>
+                    
+                    <h3>1.1 项目背景</h3>
+                    <p><strong>目标</strong>：创建一个类似现代 AI 产品官网（Vercel/Notion 风格）的个人网站</p>
+                    <p><strong>设计目标</strong>：</p>
+                    <ul>
+                        <li>极简、现代、科技感</li>
+                        <li>深色主题</li>
+                        <li>清晰的信息结构</li>
+                        <li>强调 AI、自动化、效率工具主题</li>
+                        <li>提升视觉层级和可读性</li>
+                    </ul>
+
+                    <h3>1.2 技术栈选择</h3>
+                    <ul>
+                        <li><strong>前端</strong>：纯 HTML5 + CSS3 + JavaScript（无框架依赖）</li>
+                        <li><strong>样式</strong>：Tailwind CSS 风格自定义 CSS</li>
+                        <li><strong>字体</strong>：Inter（Google Fonts）</li>
+                        <li><strong>部署</strong>：Nginx + 腾讯云服务器</li>
+                        <li><strong>版本控制</strong>：Git + GitHub</li>
+                    </ul>
+
+                    <h3>1.3 网站结构</h3>
+                    <pre><code>网站架构：
+├── Navbar（固定导航栏）
+│   ├── Logo
+│   └── 导航链接：首页、博客、工具、实验、关于
+│
+├── Hero Section（首屏）
+│   ├── 左侧：标题 + 副标题 + CTA按钮
+│   └── 右侧：代码终端视觉效果
+│
+├── Exploration Section（探索领域）
+│   ├── AI Tools
+│   ├── Automation
+│   └── Productivity
+│
+├── Tools Section（工具展示）
+│   └── SmartCS-V3（AI客服冷启动工具）
+│
+├── Blog Section（博客文章）
+│   └── OpenClaw 新手入门教程
+│
+├── About Section（关于我）
+│   └── 个人介绍 + 联系方式
+│
+├── Subscribe Section（订阅）
+│   └── 邮箱订阅表单
+│
+└── Footer（页脚）
+    └── 版权信息 + 社交链接</code></pre>
+
+                    <h3>1.4 设计规范</h3>
+                    <p><strong>颜色系统</strong>：</p>
+                    <pre><code>--bg-primary: #0f172a      /* 主背景 */
+--bg-secondary: #1e293b    /* 次级背景 */
+--text-primary: #f8fafc    /* 主文字 */
+--text-secondary: #94a3b8  /* 次级文字 */
+--accent-primary: #6366f1  /* 强调色 */
+--accent-secondary: #8b5cf6 /* 渐变结束 */</code></pre>
+
+                    <p><strong>视觉效果</strong>：</p>
+                    <ul>
+                        <li>渐变背景（紫色到蓝色）</li>
+                        <li>毛玻璃效果（backdrop-filter）</li>
+                        <li>卡片悬停动画（scale + shadow）</li>
+                        <li>滚动渐入动画</li>
+                    </ul>
+
+                    <h3>1.5 响应式设计</h3>
+                    <p><strong>断点设置</strong>：</p>
+                    <ul>
+                        <li>桌面端：> 1024px</li>
+                        <li>平板端：768px - 1024px</li>
+                        <li>移动端：< 768px</li>
+                    </ul>
+
+                    <h3>1.6 部署流程</h3>
+                    <pre><code># 1. 构建项目
+npm run build
+
+# 2. 部署到 Nginx
+rm -rf /var/www/html/*
+cp -r portfolio/* /var/www/html/
+
+# 3. 重启 Nginx
+systemctl reload nginx</code></pre>
+
+                    <p><strong>访问地址</strong>：http://111.229.212.20/index.html</p>
+
+                    <h2>第二部分：SmartCS-V3 工具集成</h2>
+
+                    <h3>2.1 项目介绍</h3>
+                    <p><strong>SmartCS-V3</strong> 是一个 AI 客服冷启动工具，基于 DeepSeek API 构建。</p>
+                    
+                    <p><strong>功能特性</strong>：</p>
+                    <ul>
+                        <li>上传客服对话记录（CSV/TXT）</li>
+                        <li>AI 自动分析业务场景</li>
+                        <li>生成标准作业程序（SOP）</li>
+                        <li>识别高频问题和解决方案</li>
+                    </ul>
+
+                    <p><strong>技术栈</strong>：</p>
+                    <ul>
+                        <li>React 19</li>
+                        <li>TypeScript</li>
+                        <li>Vite</li>
+                        <li>DeepSeek API</li>
+                        <li>Tailwind CSS</li>
+                    </ul>
+
+                    <h3>2.2 部署挑战与解决方案</h3>
+
+                    <h4>挑战 1：CORS 跨域限制</h4>
+                    <p><strong>问题</strong>：浏览器无法直接调用 DeepSeek API</p>
+                    <p><strong>解决方案</strong>：Nginx 反向代理</p>
+                    <pre><code>location /api/deepseek {
+    proxy_pass https://api.deepseek.com/chat/completions;
+    proxy_set_header Authorization "Bearer $DEEPSEEK_API_KEY";
+    proxy_set_header Content-Type "application/json";
+    proxy_set_header Host api.deepseek.com;
+}</code></pre>
+
+                    <h4>挑战 2：API Key 安全存储</h4>
+                    <p><strong>问题</strong>：Key 硬编码在代码中存在泄露风险</p>
+                    <p><strong>解决方案</strong>：</p>
+                    <ol>
+                        <li>将 Key 存储在服务器安全目录：<code>/etc/nginx/secrets/</code></li>
+                        <li>设置文件权限为 600（仅 root 可读）</li>
+                        <li>通过环境变量或后端服务读取</li>
+                    </ol>
+
+                    <h4>挑战 3：访问控制与限流</h4>
+                    <p><strong>问题</strong>：公开的 API 可能被滥用</p>
+                    <p><strong>解决方案</strong>：Node.js 后端服务</p>
+                    <pre><code>// 速率限制：每分钟 20 次
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: '请求过于频繁' }
+});
+
+// 密码验证
+const authMiddleware = (req, res, next) => {
+  const { password } = req.body;
+  if (password !== 'limuzi2025') {
+    return res.status(401).json({ error: '访问被拒绝' });
+  }
+  next();
+};</code></pre>
+
+                    <h3>2.3 安全架构</h3>
+                    <pre><code>用户请求 → Nginx → Node.js后端 → DeepSeek API
+              ↓         ↓
+         静态文件    密码验证
+                     速率限制
+                     Key管理</code></pre>
+
+                    <h3>2.4 访问信息</h3>
+                    <ul>
+                        <li><strong>工具地址</strong>：http://111.229.212.20/tools/smartcs-v3/</li>
+                        <li><strong>访问密码</strong>：<code>limuzi2025</code></li>
+                        <li><strong>速率限制</strong>：每分钟 20 次请求</li>
+                    </ul>
+
+                    <h2>第三部分：OpenClaw 开发体验</h2>
+
+                    <h3>3.1 开发效率提升</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>任务</th>
+                                <th>传统时间</th>
+                                <th>AI 辅助时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>网站设计</td>
+                                <td>4-6 小时</td>
+                                <td>30 分钟</td>
+                            </tr>
+                            <tr>
+                                <td>代码编写</td>
+                                <td>8-12 小时</td>
+                                <td>1-2 小时</td>
+                            </tr>
+                            <tr>
+                                <td>调试部署</td>
+                                <td>2-4 小时</td>
+                                <td>30 分钟</td>
+                            </tr>
+                            <tr>
+                                <td><strong>总计</strong></td>
+                                <td><strong>14-22 小时</strong></td>
+                                <td><strong>2-3 小时</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>3.2 关键能力</h3>
+                    <ol>
+                        <li><strong>代码生成</strong>：根据设计描述生成完整的 HTML/CSS/JS</li>
+                        <li><strong>错误诊断</strong>：自动识别并修复部署问题</li>
+                        <li><strong>架构设计</strong>：提供安全、可扩展的技术方案</li>
+                        <li><strong>文档编写</strong>：自动生成技术文档和说明</li>
+                    </ol>
+
+                    <h3>3.3 最佳实践</h3>
+                    <ol>
+                        <li><strong>明确需求</strong>：提供详细的设计规范和参考示例</li>
+                        <li><strong>迭代优化</strong>：根据反馈持续改进</li>
+                        <li><strong>安全意识</strong>：API Key 管理、访问控制</li>
+                        <li><strong>版本控制</strong>：Git 备份和版本管理</li>
+                    </ol>
+
+                    <h2>第四部分：总结与展望</h2>
+
+                    <h3>4.1 项目成果</h3>
+                    <ul>
+                        <li>✅ <strong>个人网站</strong>：现代化设计，完整功能，响应式布局</li>
+                        <li>✅ <strong>AI 工具集成</strong>：SmartCS-V3 成功部署，安全可靠</li>
+                        <li>✅ <strong>技术积累</strong>：Nginx 配置、Node.js 后端、API 代理</li>
+                    </ul>
+
+                    <h3>4.2 后续优化方向</h3>
+                    <ol>
+                        <li><strong>内容扩展</strong>：添加更多博客文章和工具</li>
+                        <li><strong>性能优化</strong>：CDN 加速、图片懒加载</li>
+                        <li><strong>SEO 优化</strong>：添加 meta 标签、结构化数据</li>
+                        <li><strong>用户系统</strong>：注册登录、个人中心</li>
+                    </ol>
+
+                    <h3>4.3 资源链接</h3>
+                    <ul>
+                        <li><strong>个人网站</strong>：http://111.229.212.20/index.html</li>
+                        <li><strong>GitHub 仓库</strong>：https://github.com/sunhuaili2026/limuzi-blog</li>
+                        <li><strong>SmartCS-V3</strong>：http://111.229.212.20/tools/smartcs-v3/</li>
+                    </ul>
+
+                    <hr>
+
+                    <p><strong>文档版本</strong>：v1.0<br>
+                    <strong>创建时间</strong>：2026-03-10<br>
+                    <strong>作者</strong>：李子木<br>
+                    <strong>技术栈</strong>：OpenClaw + React + TypeScript + Nginx + DeepSeek</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-icon">◆</span>
+                    <span>李子木</span>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/sunhuaili2026" target="_blank">GitHub</a>
+                    <a href="#">RSS</a>
+                    <a href="mailto:sunhuaili2025@gmail.com">Email</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 李子木. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../script.js"></script>
+</body>
+</html>

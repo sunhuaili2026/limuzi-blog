@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>如何从动态网站下载视频 - 李子木</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .article-page {
+            padding-top: 120px;
+        }
+        .article-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+        .article-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        .article-category {
+            display: inline-block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+        }
+        .article-title {
+            font-size: 42px;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+        .article-meta {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .article-meta time {
+            color: var(--text-muted);
+        }
+        .article-meta .separator {
+            width: 4px;
+            height: 4px;
+            background: var(--text-muted);
+            border-radius: 50%;
+        }
+        .article-content {
+            font-size: 17px;
+            line-height: 1.9;
+        }
+        .article-content h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 48px 0 24px;
+            letter-spacing: -0.01em;
+        }
+        .article-content h3 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 36px 0 18px;
+        }
+        .article-content p {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+        .article-content ul, .article-content ol {
+            margin-bottom: 24px;
+            padding-left: 24px;
+        }
+        .article-content li {
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        .article-content code {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 14px;
+            background: rgba(99, 102, 241, 0.1);
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: var(--accent-primary);
+        }
+        .article-content pre {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+        }
+        .article-content pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .article-content blockquote {
+            border-left: 3px solid var(--accent-primary);
+            padding-left: 24px;
+            margin: 32px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .article-content a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+        .article-content a:hover {
+            text-decoration: underline;
+        }
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+        }
+        .article-content th, .article-content td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .article-content th {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .article-footer {
+            margin-top: 80px;
+            padding-top: 40px;
+            border-top: 1px solid var(--border-color);
+        }
+        .article-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .article-tag {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-primary);
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 40px;
+            transition: color var(--transition-fast);
+        }
+        .back-link:hover {
+            color: var(--accent-primary);
+        }
+        @media (max-width: 768px) {
+            .article-title {
+                font-size: 28px;
+            }
+            .article-content h2 {
+                font-size: 22px;
+            }
+            .article-content h3 {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">
+                <span class="logo-text">李子木</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="../index.html" class="nav-link">首页</a></li>
+                <li><a href="../blog.html" class="nav-link active">博客</a></li>
+                <li><a href="../tools.html" class="nav-link">工具</a></li>
+                <li><a href="../index.html#experiments" class="nav-link">实验</a></li>
+                <li><a href="../index.html#about" class="nav-link">关于</a></li>
+            </ul>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Article -->
+    <main class="article-page">
+        <article class="article-container">
+            <a href="../blog.html" class="back-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                返回博客
+            </a>
+
+            <header class="article-header">
+                <span class="article-category">技术教程</span>
+                <h1 class="article-title">如何从动态网站下载视频：一次实战记录</h1>
+                <div class="article-meta">
+                    <time datetime="2026-05-08">2026 年 5 月 8 日</time>
+                    <span class="separator"></span>
+                    <span>15 分钟阅读</span>
+                </div>
+            </header>
+
+            <div class="article-content">
+                <blockquote>
+                    摘要：本文记录了从星语智能官网下载应用案例视频的完整过程，包括遇到的技术挑战、解决方案和最终实现方法。适用于需要从 React/Vue 等动态网站抓取媒体资源的场景。
+                </blockquote>
+
+                <h2>📋 任务背景</h2>
+                <p>
+                    用户需要从 <code>https://www.xingyu-ai.com/</code> 网站下载几个应用案例视频。
+                    看似简单的任务，实际上遇到了不少技术挑战。
+                </p>
+
+                <h2>🚧 遇到的挑战</h2>
+
+                <h3>1. 浏览器工具故障</h3>
+                <p>一开始尝试使用 OpenClaw 的浏览器工具，但遇到超时错误：</p>
+                <pre><code>browser tool timed out. Restart the OpenClaw gateway.</code></pre>
+                <p><strong>解决方案</strong>：重启 gateway 服务</p>
+                <pre><code>openclaw gateway restart</code></pre>
+                <p>但重启后浏览器仍然不可用，需要寻找替代方案。</p>
+
+                <h3>2. 动态渲染的单页应用</h3>
+                <p>通过 <code>curl</code> 和 <code>web_fetch</code> 获取的 HTML 内容非常有限：</p>
+                <pre><code>&lt;div id="root"&gt;&lt;/div&gt;
+&lt;script type="module" crossorigin src="/assets/index-Dwpe8heu.js"&gt;&lt;/script&gt;</code></pre>
+                <p><strong>问题分析</strong>：</p>
+                <ul>
+                    <li>网站使用 React + Vite 构建</li>
+                    <li>视频链接通过 JavaScript 动态加载</li>
+                    <li>静态 HTML 中不包含视频资源地址</li>
+                    <li>传统的 <code>curl</code> + <code>grep</code> 方法无法获取视频链接</li>
+                </ul>
+
+                <h3>3. 视频链接隐藏较深</h3>
+                <p>尝试从 JS 文件中提取视频链接：</p>
+                <pre><code>curl -s https://www.xingyu-ai.com/assets/index-Dwpe8heu.js | grep -oE 'https?://[^"]+\.mp4'</code></pre>
+                <p>结果：无输出。视频链接被打包在编译后的 JS 代码中，难以直接提取。</p>
+
+                <h2>✅ 最终解决方案</h2>
+
+                <h3>方案选择：Playwright 自动化浏览器</h3>
+                <p>由于静态抓取不可行，决定使用 Playwright 来渲染完整的页面并捕获网络请求。</p>
+
+                <h3>步骤 1：安装 Playwright</h3>
+                <pre><code># 安装 Playwright
+cd /tmp
+npm install playwright
+
+# 安装 Chromium 浏览器
+npx playwright install chromium</code></pre>
+
+                <h3>步骤 2：编写爬取脚本</h3>
+                <p>创建 <code>download-xingyu.js</code>：</p>
+                <pre><code>const { chromium } = require('playwright');
+
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+  
+  // 访问目标网站
+  await page.goto('https://www.xingyu-ai.com/', { 
+    waitUntil: 'networkidle', 
+    timeout: 30000 
+  });
+  
+  // 等待页面完全加载
+  await page.waitForTimeout(5000);
+  
+  // 查找所有 video 元素和 source 元素
+  const videos = await page.evaluate(() => {
+    const results = [];
+    
+    // 查找所有 video 标签
+    document.querySelectorAll('video').forEach((video, i) => {
+      if (video.src) results.push({ type: 'video', src: video.src, index: i });
+      video.querySelectorAll('source').forEach(source => {
+        if (source.src) results.push({ type: 'source', src: source.src, index: i });
+      });
+    });
+    
+    return results;
+  });
+  
+  console.log('Found videos:', JSON.stringify(videos, null, 2));
+  
+  await browser.close();
+})();</code></pre>
+
+                <h3>步骤 3：执行脚本获取视频链接</h3>
+                <pre><code>cd /tmp && node download-xingyu.js</code></pre>
+                <p><strong>输出结果</strong>：</p>
+                <pre><code>Found videos: [
+  {
+    "type": "source",
+    "src": "https://www.xingyu-ai.com/dolphon/dols.mp4",
+    "index": 0
+  },
+  {
+    "type": "source",
+    "src": "https://www.xingyu-ai.com/videos/xixiaomin.mp4",
+    "index": 1
+  },
+  {
+    "type": "source",
+    "src": "https://www.xingyu-ai.com/videos/haidilao.mp4",
+    "index": 2
+  },
+  {
+    "type": "source",
+    "src": "https://www.xingyu-ai.com/videos/fangyan.mp4",
+    "index": 3
+  },
+  {
+    "type": "source",
+    "src": "https://www.xingyu-ai.com/videos/kuaidi.mp4",
+    "index": 4
+  }
+]</code></pre>
+
+                <h3>步骤 4：批量下载视频</h3>
+                <pre><code># 创建下载目录
+mkdir -p /root/.openclaw/workspace/xingyu-videos
+cd /root/.openclaw/workspace/xingyu-videos
+
+# 下载所有视频
+curl -LO https://www.xingyu-ai.com/dolphon/dols.mp4
+curl -LO https://www.xingyu-ai.com/videos/xixiaomin.mp4
+curl -LO https://www.xingyu-ai.com/videos/haidilao.mp4
+curl -LO https://www.xingyu-ai.com/videos/fangyan.mp4
+curl -LO https://www.xingyu-ai.com/videos/kuaidi.mp4</code></pre>
+
+                <h3>步骤 5：验证下载结果</h3>
+                <pre><code>ls -lh /root/.openclaw/workspace/xingyu-videos/</code></pre>
+                <p><strong>结果</strong>：</p>
+                <pre><code>total 60M
+-rw-r--r-- 1 root root 6.6M  dols.mp4
+-rw-r--r-- 1 root root  13M  fangyan.mp4
+-rw-r--r-- 1 root root  16M  haidilao.mp4
+-rw-r--r-- 1 root root 9.6M  kuaidi.mp4
+-rw-r--r-- 1 root root  16M  xixiaomin.mp4</code></pre>
+
+                <h2>🛠️ 技术栈总结</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>工具</th>
+                            <th>用途</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>curl</code></td>
+                            <td>初步探测</td>
+                            <td>获取静态 HTML，判断网站类型</td>
+                        </tr>
+                        <tr>
+                            <td><code>grep</code></td>
+                            <td>文本搜索</td>
+                            <td>尝试从 HTML/JS 中提取链接</td>
+                        </tr>
+                        <tr>
+                            <td><code>Playwright</code></td>
+                            <td>页面渲染</td>
+                            <td>执行 JavaScript，获取动态内容</td>
+                        </tr>
+                        <tr>
+                            <td><code>Node.js</code></td>
+                            <td>脚本运行</td>
+                            <td>执行 Playwright 自动化脚本</td>
+                        </tr>
+                        <tr>
+                            <td><code>curl</code></td>
+                            <td>文件下载</td>
+                            <td>批量下载视频文件</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>📝 方法论总结</h2>
+
+                <h3>动态网站爬取的一般流程</h3>
+                <ol>
+                    <li>
+                        <strong>初步探测</strong>
+                        <ul>
+                            <li>curl/wget 获取 HTML</li>
+                            <li>检查是否包含目标资源</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>判断网站类型</strong>
+                        <ul>
+                            <li>静态网站 → 直接 grep 提取链接</li>
+                            <li>动态网站 (SPA) → 需要浏览器渲染</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>选择工具</strong>
+                        <ul>
+                            <li>Playwright/Puppeteer → 完整浏览器自动化</li>
+                            <li>Selenium → 老牌选择，支持多浏览器</li>
+                            <li>jsdom → 轻量级 JS 执行</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>提取资源</strong>
+                        <ul>
+                            <li>DOM 查询 (querySelectorAll)</li>
+                            <li>网络请求拦截</li>
+                            <li>JavaScript 变量提取</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>批量下载</strong>
+                        <ul>
+                            <li>curl/wget/aria2</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>关键技巧</h3>
+                <ul>
+                    <li><strong>等待网络空闲</strong>：<code>waitUntil: 'networkidle'</code> 确保所有资源加载完成</li>
+                    <li><strong>额外等待时间</strong>：动态内容可能需要额外延迟</li>
+                    <li><strong>多方式提取</strong>：同时尝试 DOM 查询和网络请求拦截</li>
+                    <li><strong>错误处理</strong>：添加超时和重试机制</li>
+                </ul>
+
+                <h2>⚠️ 注意事项</h2>
+
+                <h3>法律合规</h3>
+                <ul>
+                    <li>确保爬取行为符合网站 <code>robots.txt</code> 规定</li>
+                    <li>仅下载允许公开访问的资源</li>
+                    <li>尊重版权，不要用于商业用途</li>
+                </ul>
+
+                <h3>技术限制</h3>
+                <ul>
+                    <li>某些网站使用 CDN 或防盗链机制</li>
+                    <li>视频可能是分片传输 (HLS/m3u8)</li>
+                    <li>可能需要处理 Cookie/认证</li>
+                </ul>
+
+                <h3>性能优化</h3>
+                <ul>
+                    <li>使用 <code>headless: true</code> 减少资源消耗</li>
+                    <li>合理设置超时时间</li>
+                    <li>批量下载时控制并发</li>
+                </ul>
+
+                <h2>🔧 完整脚本参考</h2>
+                <pre><code>// download-videos.js
+const { chromium } = require('playwright');
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const OUTPUT_DIR = './downloads';
+
+async function downloadVideos() {
+  // 创建输出目录
+  if (!fs.existsSync(OUTPUT_DIR)) {
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  }
+
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+  
+  try {
+    // 访问页面
+    await page.goto('https://www.xingyu-ai.com/', { 
+      waitUntil: 'networkidle',
+      timeout: 30000 
+    });
+    
+    // 等待内容加载
+    await page.waitForTimeout(5000);
+    
+    // 提取视频链接
+    const videos = await page.evaluate(() => {
+      const results = [];
+      document.querySelectorAll('video source, video').forEach(el => {
+        const src = el.src || el.getAttribute('src');
+        if (src && !results.includes(src)) {
+          results.push(src);
+        }
+      });
+      return results;
+    });
+    
+    console.log(`找到 ${videos.length} 个视频`);
+    
+    // 下载视频
+    for (const videoUrl of videos) {
+      const filename = path.basename(videoUrl);
+      console.log(`下载：${filename}`);
+      execSync(`curl -LO "${videoUrl}"`, { 
+        cwd: OUTPUT_DIR,
+        stdio: 'inherit'
+      });
+    }
+    
+  } finally {
+    await browser.close();
+  }
+}
+
+downloadVideos().catch(console.error);</code></pre>
+
+                <h2>📚 延伸阅读</h2>
+                <ul>
+                    <li><a href="https://playwright.dev/" target="_blank">Playwright 官方文档</a></li>
+                    <li><a href="https://scrapinghub.com/web-scraping-best-practices" target="_blank">Web Scraping Best Practices</a></li>
+                    <li><a href="https://www.zenrows.com/blog/web-scraping-dynamic-websites" target="_blank">处理动态网站的技术对比</a></li>
+                </ul>
+            </div>
+
+            <footer class="article-footer">
+                <div class="article-tags">
+                    <span class="article-tag">Web Scraping</span>
+                    <span class="article-tag">Playwright</span>
+                    <span class="article-tag">Video Download</span>
+                    <span class="article-tag">Automation</span>
+                    <span class="article-tag">AI 实践</span>
+                </div>
+            </footer>
+        </article>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-text">李子木</span>
+                    <p>用 AI 构建工具，探索自动化与效率</p>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/sunhuaili2026" target="_blank">GitHub</a>
+                    <a href="#">RSS</a>
+                    <a href="mailto:sunhuaili2025@gmail.com">Email</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 李子木。All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../script.js"></script>
+</body>
+</html>

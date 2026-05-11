@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoryTwin - 幼儿英文故事音频生成器 - 李子木</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        .tool-hero {
+            background: var(--bg-primary);
+            padding: 120px 24px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        .tool-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 50%, rgba(139, 92, 246, 0.1), transparent);
+            pointer-events: none;
+        }
+        .tool-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        .tool-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .tool-title {
+            font-size: 48px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 16px;
+        }
+        .gradient-text {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .tool-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-glow);
+        }
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+        .feature-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .feature-desc {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .tool-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 60px;
+        }
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+        .story-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .story-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .story-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+        .story-card.selected {
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.1);
+            box-shadow: var(--shadow-glow);
+        }
+        .story-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .story-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .story-name-en {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .story-duration {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .story-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        .config-item label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+        .config-select {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .config-select:hover {
+            border-color: var(--accent-primary);
+        }
+        .config-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .speed-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            min-width: 40px;
+        }
+        .speed-slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-card);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            cursor: pointer;
+            box-shadow: var(--shadow-md);
+        }
+        .generate-btn {
+            width: 100%;
+            padding: 16px 32px;
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+        .generate-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .progress-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 60px;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-gradient);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .audio-player {
+            width: 100%;
+            margin-top: 24px;
+        }
+        .audio-player audio {
+            width: 100%;
+            border-radius: 8px;
+        }
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: #10b981;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-top: 16px;
+        }
+        .download-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
+</head>
+<body x-data="app()" x-init="init()">
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="nav-logo">
+                <span class="logo-icon">◆</span>
+                <span class="logo-text">李子木</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="/index.html" class="nav-link">首页</a></li>
+                <li><a href="/blog.html" class="nav-link">博客</a></li>
+                <li><a href="/tools.html" class="nav-link active">工具</a></li>
+                <li><a href="/#about" class="nav-link">关于</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Tool Hero -->
+    <section class="tool-hero">
+        <div class="tool-container">
+            <div class="tool-badge">
+                <span class="badge-dot"></span>
+                免费工具
+            </div>
+            <h1 class="tool-title">
+                🎧 StoryTwin
+                <span class="gradient-text">经典故事中英对照朗读</span>
+            </h1>
+            <p class="tool-subtitle">
+                专为 2-6 岁幼儿设计的中英双语故事音频生成工具 | 在线试听，免费下载 MP3
+            </p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="tool-container">
+        <!-- Features -->
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3 class="feature-title">经典故事</h3>
+                <p class="feature-desc">精选伊索寓言等经典儿童故事，持续更新更多优质内容</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎙️</div>
+                <h3 class="feature-title">专业朗读</h3>
+                <p class="feature-desc">微软 AI 语音引擎，自然流畅，适合幼儿英语启蒙</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📥</div>
+                <h3 class="feature-title">免费下载</h3>
+                <p class="feature-desc">生成高质量 MP3 音频，随时收听，支持离线使用</p>
+            </div>
+        </div>
+
+        <!-- Story Selection -->
+        <div class="tool-content">
+            <h2 class="section-title">选择故事</h2>
+            <div class="story-grid">
+                <template x-for="story in stories" :key="story.id">
+                    <div 
+                        @click="selectStory(story)"
+                        class="story-card"
+                        :class="selectedStory?.id === story.id ? 'selected' : ''"
+                    >
+                        <div class="story-header">
+                            <div>
+                                <div class="story-name" x-text="story.name_cn"></div>
+                                <div class="story-name-en" x-text="story.name_en"></div>
+                            </div>
+                            <span class="story-duration" x-text="story.duration"></span>
+                        </div>
+                        <p class="story-desc" x-text="story.description"></p>
+                        <div class="story-meta" style="margin-top: 12px; font-size: 13px; color: var(--text-muted);">
+                            <span x-text="story.sentence_count + ' 句'"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="tool-content" x-show="selectedStory" x-cloak>
+            <h2 class="section-title">配置选项</h2>
+            <div class="config-grid">
+                <div class="config-item">
+                    <label>中文声音</label>
+                    <select x-model="config.cnVoice" class="config-select">
+                        <template x-for="voice in voices.cn" :key="voice.id">
+                            <option :value="voice.voice" x-text="voice.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="config-item">
+                    <label>英文声音</label>
+                    <select x-model="config.enVoice" class="config-select">
+                        <template x-for="voice in voices.en" :key="voice.id">
+                            <option :value="voice.voice" x-text="voice.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="config-item">
+                    <label>播放模式</label>
+                    <select x-model="config.playMode" class="config-select">
+                        <option value="separate">先中文后英文</option>
+                        <option value="alternating">中英交替</option>
+                    </select>
+                </div>
+                <div class="config-item">
+                    <label>语速调节</label>
+                    <div class="speed-control">
+                        <span class="speed-label">慢</span>
+                        <input type="range" x-model="config.speed" min="-20" max="10" class="speed-slider" />
+                        <span class="speed-label">快</span>
+                    </div>
+                </div>
+            </div>
+
+            <button 
+                @click="generateAudio()"
+                :disabled="generating || !selectedStory"
+                class="generate-btn"
+            >
+                <span x-show="!generating">
+                    <span>🎙️</span>
+                    <span>开始生成音频</span>
+                </span>
+                <span x-show="generating">
+                    <span>⏳</span>
+                    <span>生成中...</span>
+                </span>
+            </button>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-section" x-show="generating || completed" x-cloak>
+            <h2 class="section-title">生成进度</h2>
+            <div class="progress-header">
+                <span x-text="statusText"></span>
+                <span x-text="progress + '%'"></span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" :style="`width: ${progress}%`"></div>
+            </div>
+            
+            <div class="audio-player" x-show="completed && audioUrl" x-cloak>
+                <audio :src="audioUrl" controls></audio>
+                <a 
+                    :href="audioUrl" 
+                    download="story.mp3"
+                    class="download-btn"
+                >
+                    <span>📥</span>
+                    <span>下载 MP3</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer style="background: var(--bg-secondary); border-top: 1px solid var(--border-color); padding: 60px 24px; margin-top: 60px;">
+        <div class="tool-container" style="text-align: center;">
+            <p style="color: var(--text-primary); font-weight: 600; margin-bottom: 8px;">🎧 StoryTwin</p>
+            <p style="color: var(--text-secondary); font-size: 14px;">使用 edge-tts (微软免费 TTS) 生成 | 适合 2-6 岁幼儿英语启蒙</p>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 24px;">© 2026 李子木。All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        function app() {
+            return {
+                stories: [],
+                voices: { cn: [], en: [] },
+                selectedStory: null,
+                config: {
+                    cnVoice: 'zh-CN-XiaoyiNeural',
+                    enVoice: 'en-US-JennyNeural',
+                    playMode: 'separate',
+                    speed: -5
+                },
+                generating: false,
+                completed: false,
+                progress: 0,
+                statusText: '准备中...',
+                taskId: null,
+                audioUrl: null,
+
+                async init() {
+                    await this.loadStories();
+                    await this.loadVoices();
+                },
+
+                async loadStories() {
+                    try {
+                        const res = await fetch('/api/stories');
+                        this.stories = await res.json();
+                        if (this.stories.length > 0) {
+                            this.selectStory(this.stories[0]);
+                        }
+                    } catch (e) {
+                        console.error('加载故事失败:', e);
+                    }
+                },
+
+                async loadVoices() {
+                    try {
+                        const res = await fetch('/api/voices');
+                        this.voices = await res.json();
+                    } catch (e) {
+                        console.error('加载声音失败:', e);
+                    }
+                },
+
+                selectStory(story) {
+                    this.selectedStory = story;
+                },
+
+                async generateAudio() {
+                    if (!this.selectedStory) return;
+                    
+                    this.generating = true;
+                    this.completed = false;
+                    this.progress = 0;
+                    this.statusText = '正在生成...';
+                    
+                    try {
+                        const res = await fetch('/api/generate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                story_id: this.selectedStory.id,
+                                cn_voice: this.config.cnVoice,
+                                en_voice: this.config.enVoice,
+                                cn_rate: this.config.speed + '%',
+                                en_rate: (this.config.speed - 5) + '%',
+                                play_mode: this.config.playMode
+                            })
+                        });
+                        
+                        const data = await res.json();
+                        this.taskId = data.task_id;
+                        
+                        this.pollStatus();
+                    } catch (e) {
+                        console.error('生成失败:', e);
+                        this.generating = false;
+                        this.statusText = '生成失败，请重试';
+                    }
+                },
+
+                async pollStatus() {
+                    const poll = async () => {
+                        try {
+                            const res = await fetch(`/api/status/${this.taskId}`);
+                            const data = await res.json();
+                            
+                            this.progress = data.progress;
+                            
+                            if (data.status === 'completed') {
+                                this.generating = false;
+                                this.completed = true;
+                                this.statusText = '生成完成！';
+                                this.audioUrl = `/api/download/${this.taskId}`;
+                            } else if (data.status === 'failed') {
+                                this.generating = false;
+                                this.statusText = '生成失败：' + (data.error || '未知错误');
+                            } else {
+                                this.statusText = '正在生成...';
+                                setTimeout(poll, 2000);
+                            }
+                        } catch (e) {
+                            console.error('轮询失败:', e);
+                            setTimeout(poll, 2000);
+                        }
+                    };
+                    
+                    poll();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

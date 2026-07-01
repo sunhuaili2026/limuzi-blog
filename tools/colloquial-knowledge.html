@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>口语化知识转换 - SmartCS 扩充 - 李子木</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .kc-tool {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .kc-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 999px;
+            color: var(--accent-primary);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .kc-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .kc-card h2 {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .kc-textarea {
+            width: 100%;
+            min-height: 220px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s ease;
+            line-height: 1.7;
+        }
+
+        .kc-textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .kc-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .kc-option-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .kc-select {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .kc-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .kc-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+
+        .kc-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .kc-btn:hover {
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .kc-btn.primary {
+            background: var(--accent-gradient);
+            border: none;
+        }
+
+        .kc-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .kc-result {
+            display: none;
+            margin-top: 8px;
+        }
+
+        .kc-result.active {
+            display: block;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .kc-summary {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        .kc-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 16px;
+        }
+
+        .kc-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .kc-section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .kc-section-icon.purple { background: rgba(168, 85, 247, 0.15); }
+        .kc-section-icon.blue { background: rgba(59, 130, 246, 0.15); }
+        .kc-section-icon.green { background: rgba(34, 197, 94, 0.15); }
+
+        .kc-section-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .kc-qa-item {
+            padding: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        .kc-qa-item:last-child { margin-bottom: 0; }
+
+        .kc-question {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .kc-answer {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .kc-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .kc-tag {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(99, 102, 241, 0.12);
+            color: var(--accent-primary);
+        }
+
+        .kc-dialogue {
+            border-left: 3px solid var(--accent-primary);
+            padding-left: 16px;
+            margin-bottom: 16px;
+        }
+
+        .kc-dialogue-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .kc-turn {
+            margin-bottom: 10px;
+            line-height: 1.7;
+        }
+
+        .kc-turn-role {
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-right: 6px;
+        }
+
+        .kc-turn.customer .kc-turn-role { color: #f59e0b; }
+
+        .kc-tips {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .kc-tips li {
+            position: relative;
+            padding-left: 18px;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .kc-tips li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--accent-primary);
+        }
+
+        .kc-export-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .kc-hint {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 10px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="nav-logo">
+                <span class="logo-icon">◆</span>
+                <span class="logo-text">李子木</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="/index.html" class="nav-link">首页</a></li>
+                <li><a href="/blog.html" class="nav-link">博客</a></li>
+                <li><a href="/tools.html" class="nav-link active">工具</a></li>
+                <li><a href="/index.html#about" class="nav-link">关于</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <section class="page-header" style="padding: 120px 0 40px;">
+        <div class="container">
+            <span class="section-label">SmartCS 扩充</span>
+            <h1 class="page-title" style="font-size: 36px; margin-bottom: 12px;">💬 口语化知识转换</h1>
+            <p class="page-subtitle" style="font-size: 16px; color: var(--text-secondary);">
+                将 SOP、FAQ、政策文档等正式知识，转换为 AI 客服可直接使用的口语化问答与对话脚本
+            </p>
+        </div>
+    </section>
+
+    <section class="section" style="padding-top: 0;">
+        <div class="container">
+            <div class="kc-tool">
+                <div class="kc-badge">🔗 SmartCS 冷启动 → 口语化知识转换 → AI 客服上线</div>
+
+                <div class="kc-card">
+                    <h2>粘贴原始知识内容</h2>
+                    <textarea
+                        class="kc-textarea"
+                        id="knowledgeInput"
+                        placeholder="请粘贴 SOP 流程、FAQ 条目、产品说明、退换货政策等正式文档内容。例如：
+
+【退换货政策】
+1. 自签收之日起 7 天内，商品未拆封可申请无理由退货。
+2. 质量问题 15 天内可申请换货，需提供照片凭证。
+3. 定制类商品不支持退换货。
+4. 退款将在仓库验收后 3-5 个工作日原路返回。"
+                    ></textarea>
+                    <p class="kc-hint">支持粘贴 SmartCS 冷启动工具生成的 FAQ / SOP 结果，一键转为口语化客服话术。</p>
+
+                    <div class="kc-options">
+                        <div class="kc-option-group">
+                            <label for="convertMode">转换模式</label>
+                            <select class="kc-select" id="convertMode">
+                                <option value="faq">FAQ 口语化 — 生成用户问法 + 口语回答</option>
+                                <option value="sop">SOP 对话化 — 将流程转为多轮对话脚本</option>
+                                <option value="policy">政策通俗化 — 复杂条款转为易懂表达</option>
+                                <option value="full">全量转换 — FAQ + 对话 + 话术建议</option>
+                            </select>
+                        </div>
+                        <div class="kc-option-group">
+                            <label for="toneStyle">话术风格</label>
+                            <select class="kc-select" id="toneStyle">
+                                <option value="friendly">专业亲和 — 礼貌、清晰、有温度</option>
+                                <option value="concise">简洁高效 — 短句、直达要点</option>
+                                <option value="colloquial">口语化 — 贴近日常聊天表达</option>
+                            </select>
+                        </div>
+                        <div class="kc-option-group">
+                            <label for="industry">业务场景</label>
+                            <select class="kc-select" id="industry">
+                                <option value="ecommerce">电商零售</option>
+                                <option value="saas">SaaS / 软件服务</option>
+                                <option value="finance">金融保险</option>
+                                <option value="general">通用客服</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="kc-actions">
+                        <button class="kc-btn primary" id="convertBtn" onclick="convertKnowledge()">
+                            <span>✨</span>
+                            <span>开始转换</span>
+                        </button>
+                        <button class="kc-btn" onclick="loadSample()">
+                            <span>📋</span>
+                            <span>加载示例</span>
+                        </button>
+                        <a href="/tools/smartcs-coldstart/" class="kc-btn">
+                            <span>🤖</span>
+                            <span>返回 SmartCS</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="kc-result" id="loadingState">
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>AI 正在将正式知识转换为口语化客服话术，请稍候...</p>
+                    </div>
+                </div>
+
+                <div class="kc-result" id="resultArea">
+                    <div class="kc-export-bar">
+                        <button class="kc-btn" onclick="copyMarkdown()">📄 复制 Markdown</button>
+                        <button class="kc-btn" onclick="downloadJSON()">⬇️ 下载 JSON</button>
+                    </div>
+                    <div class="kc-summary" id="summaryBlock"></div>
+                    <div class="kc-section" id="qaSection" style="display:none;">
+                        <div class="kc-section-header">
+                            <div class="kc-section-icon purple">❓</div>
+                            <div class="kc-section-title">口语化 FAQ</div>
+                        </div>
+                        <div id="qaList"></div>
+                    </div>
+                    <div class="kc-section" id="dialogueSection" style="display:none;">
+                        <div class="kc-section-header">
+                            <div class="kc-section-icon blue">💾</div>
+                            <div class="kc-section-title">对话脚本示例</div>
+                        </div>
+                        <div id="dialogueList"></div>
+                    </div>
+                    <div class="kc-section" id="tipsSection" style="display:none;">
+                        <div class="kc-section-header">
+                            <div class="kc-section-icon green">💡</div>
+                            <div class="kc-section-title">客服话术建议</div>
+                        </div>
+                        <ul class="kc-tips" id="tipsList"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-icon">◆</span>
+                    <span>李子木</span>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/sunhuaili2026" target="_blank">GitHub</a>
+                    <a href="#">RSS</a>
+                    <a href="mailto:sunhuaili2025@gmail.com">Email</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 李子木. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script>
+        const API_KEY = 'limuzi2025';
+        let lastResult = null;
+
+        const MODE_LABELS = {
+            faq: 'FAQ 口语化',
+            sop: 'SOP 对话化',
+            policy: '政策通俗化',
+            full: '全量转换'
+        };
+
+        const TONE_LABELS = {
+            friendly: '专业亲和',
+            concise: '简洁高效',
+            colloquial: '口语化'
+        };
+
+        const INDUSTRY_LABELS = {
+            ecommerce: '电商零售',
+            saas: 'SaaS / 软件服务',
+            finance: '金融保险',
+            general: '通用客服'
+        };
+
+        async function callAPI(messages) {
+            const response = await fetch('/api/deepseek', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    password: API_KEY,
+                    model: 'deepseek-chat',
+                    messages,
+                    temperature: 0.6
+                })
+            });
+            if (!response.ok) throw new Error('API 调用失败');
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        function buildSystemPrompt(mode, tone, industry) {
+            const modeDesc = {
+                faq: '重点生成口语化 FAQ：每条包含用户可能的真实问法（口语化）和客服回答（自然、易懂）。',
+                sop: '重点将流程步骤转为多轮客服对话脚本，覆盖常见分支与引导话术。',
+                policy: '重点将政策条款转为通俗易懂的表达，避免官腔和法律术语堆砌。',
+                full: '同时生成口语化 FAQ、典型对话脚本和客服话术建议，形成完整知识包。'
+            }[mode];
+
+            const toneDesc = {
+                friendly: '语气专业但亲切，使用"您"称呼，适当表达理解与关怀。',
+                concise: '回答简短直接，优先给结论和操作步骤，避免冗余铺垫。',
+                colloquial: '使用日常口语表达，像真人客服聊天一样自然，可适当使用语气词。'
+            }[tone];
+
+            return `你是 SmartCS 口语化知识转换专家。你的任务是将企业正式知识文档转换为 AI 智能客服可直接使用的口语化内容。
+
+业务场景：${INDUSTRY_LABELS[industry]}
+转换模式：${MODE_LABELS[mode]} — ${modeDesc}
+话术风格：${TONE_LABELS[tone]} — ${toneDesc}
+
+要求：
+1. 保留原知识的核心事实，不可编造政策或承诺
+2. 用户问法要多样化，覆盖不同口语表达方式
+3. 客服回答要可直接用于机器人或人工客服参考
+4. 复杂流程拆分为清晰的对话轮次
+
+请严格返回 JSON，不要包含其他文字：
+{
+  "summary": "转换结果概述（2-3 句话）",
+  "qa_pairs": [
+    {
+      "question": "用户口语化问法",
+      "answer": "客服口语化回答",
+      "intent": "意图标签",
+      "keywords": ["关键词1", "关键词2"]
+    }
+  ],
+  "dialogue_samples": [
+    {
+      "scenario": "场景描述",
+      "turns": [
+        {"role": "customer", "text": "用户说的话"},
+        {"role": "agent", "text": "客服回复"}
+      ]
+    }
+  ],
+  "tips": ["客服话术建议1", "客服话术建议2"]
+}`;
+        }
+
+        function parseResponse(content) {
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('无法解析 AI 返回结果');
+            return JSON.parse(jsonMatch[0]);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderResult(data) {
+            lastResult = data;
+            document.getElementById('summaryBlock').textContent = data.summary || '转换完成';
+
+            const qaSection = document.getElementById('qaSection');
+            const qaList = document.getElementById('qaList');
+            if (data.qa_pairs && data.qa_pairs.length > 0) {
+                qaList.innerHTML = data.qa_pairs.map(qa => `
+                    <div class="kc-qa-item">
+                        <div class="kc-question">Q：${escapeHtml(qa.question)}</div>
+                        <div class="kc-answer">A：${escapeHtml(qa.answer)}</div>
+                        <div class="kc-meta">
+                            ${qa.intent ? `<span class="kc-tag">${escapeHtml(qa.intent)}</span>` : ''}
+                            ${(qa.keywords || []).map(k => `<span class="kc-tag">${escapeHtml(k)}</span>`).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                qaSection.style.display = 'block';
+            } else {
+                qaSection.style.display = 'none';
+            }
+
+            const dialogueSection = document.getElementById('dialogueSection');
+            const dialogueList = document.getElementById('dialogueList');
+            if (data.dialogue_samples && data.dialogue_samples.length > 0) {
+                dialogueList.innerHTML = data.dialogue_samples.map(d => `
+                    <div class="kc-dialogue">
+                        <div class="kc-dialogue-title">${escapeHtml(d.scenario)}</div>
+                        ${(d.turns || []).map(t => `
+                            <div class="kc-turn ${t.role}">
+                                <span class="kc-turn-role">${t.role === 'customer' ? '用户' : '客服'}：</span>
+                                ${escapeHtml(t.text)}
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('');
+                dialogueSection.style.display = 'block';
+            } else {
+                dialogueSection.style.display = 'none';
+            }
+
+            const tipsSection = document.getElementById('tipsSection');
+            const tipsList = document.getElementById('tipsList');
+            if (data.tips && data.tips.length > 0) {
+                tipsList.innerHTML = data.tips.map(t => `<li>${escapeHtml(t)}</li>`).join('');
+                tipsSection.style.display = 'block';
+            } else {
+                tipsSection.style.display = 'none';
+            }
+
+            document.getElementById('resultArea').classList.add('active');
+        }
+
+        async function convertKnowledge() {
+            const input = document.getElementById('knowledgeInput').value.trim();
+            if (!input) {
+                alert('请先粘贴知识内容');
+                return;
+            }
+
+            const mode = document.getElementById('convertMode').value;
+            const tone = document.getElementById('toneStyle').value;
+            const industry = document.getElementById('industry').value;
+            const btn = document.getElementById('convertBtn');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner" style="width:16px;height:16px;margin:0;border-width:2px;"></span><span>转换中...</span>';
+            document.getElementById('loadingState').classList.add('active');
+            document.getElementById('resultArea').classList.remove('active');
+
+            try {
+                const content = await callAPI([
+                    { role: 'system', content: buildSystemPrompt(mode, tone, industry) },
+                    { role: 'user', content: `请将以下正式知识内容转换为口语化客服知识：\n\n${input}` }
+                ]);
+                renderResult(parseResponse(content));
+            } catch (error) {
+                alert('转换失败，请重试');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>✨</span><span>开始转换</span>';
+                document.getElementById('loadingState').classList.remove('active');
+            }
+        }
+
+        function toMarkdown(data) {
+            let md = `# 口语化知识转换结果\n\n${data.summary || ''}\n\n`;
+            if (data.qa_pairs?.length) {
+                md += `## 口语化 FAQ\n\n`;
+                data.qa_pairs.forEach(qa => {
+                    md += `### ${qa.question}\n\n${qa.answer}\n\n`;
+                    if (qa.intent) md += `> 意图：${qa.intent}\n\n`;
+                });
+            }
+            if (data.dialogue_samples?.length) {
+                md += `## 对话脚本\n\n`;
+                data.dialogue_samples.forEach(d => {
+                    md += `### ${d.scenario}\n\n`;
+                    (d.turns || []).forEach(t => {
+                        md += `- **${t.role === 'customer' ? '用户' : '客服'}**：${t.text}\n`;
+                    });
+                    md += '\n';
+                });
+            }
+            if (data.tips?.length) {
+                md += `## 话术建议\n\n`;
+                data.tips.forEach(t => { md += `- ${t}\n`; });
+            }
+            return md;
+        }
+
+        function copyMarkdown() {
+            if (!lastResult) return;
+            navigator.clipboard.writeText(toMarkdown(lastResult))
+                .then(() => alert('已复制 Markdown 到剪贴板'))
+                .catch(() => alert('复制失败，请手动选择内容'));
+        }
+
+        function downloadJSON() {
+            if (!lastResult) return;
+            const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'colloquial-knowledge.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadSample() {
+            document.getElementById('knowledgeInput').value = `【会员积分规则】
+1. 消费 1 元积 1 分，积分可用于兑换优惠券或实物礼品。
+2. 积分有效期为获得之日起 12 个月，过期自动清零。
+3. 退款订单对应的积分将扣回，若积分已使用则按等值金额抵扣。
+4. 生日当月消费享双倍积分，限每月首单。
+5. 积分不可转让、不可提现。`;
+        }
+    </script>
+</body>
+</html>

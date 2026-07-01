@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识库语音化转换 - SmartCS - 李子木</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+        .kv-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 900px) {
+            .kv-layout { grid-template-columns: 1fr; }
+        }
+
+        .kv-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .kv-tab {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .kv-tab:hover { border-color: var(--accent-primary); color: var(--text-primary); }
+        .kv-tab.active {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.4);
+            color: var(--accent-primary);
+        }
+
+        .kv-sidebar, .kv-main {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .kv-sidebar h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .kv-field { margin-bottom: 14px; }
+        .kv-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .kv-field input, .kv-field select, .kv-field textarea {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 9px 11px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .kv-field textarea { min-height: 60px; resize: vertical; }
+        .kv-field input:focus, .kv-field select:focus, .kv-field textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .kv-file-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .kv-file-zone:hover { border-color: var(--accent-primary); }
+        .kv-file-zone input { display: none; }
+
+        .kv-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .kv-btn:hover { border-color: var(--accent-primary); }
+        .kv-btn.primary {
+            background: var(--accent-gradient);
+            border: none;
+            margin-top: 16px;
+        }
+
+        .kv-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .kv-empty {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--text-secondary);
+        }
+
+        .kv-empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+        .kv-progress {
+            display: none;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .kv-progress.active { display: block; }
+
+        .kv-progress-bar {
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .kv-progress-fill {
+            height: 100%;
+            background: var(--accent-gradient);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .kv-stats {
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .kv-stats.active { display: grid; }
+
+        .kv-stat {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .kv-stat-num {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .kv-stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .kv-toolbar {
+            display: none;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .kv-toolbar.active { display: flex; }
+
+        .kv-toolbar .kv-btn { width: auto; padding: 10px 16px; margin-top: 0; }
+
+        .kv-table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: none;
+        }
+
+        .kv-table-wrap.active { display: block; }
+
+        .kv-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .kv-table th {
+            background: var(--bg-secondary);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .kv-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+            color: var(--text-secondary);
+            max-width: 280px;
+        }
+
+        .kv-table tr:last-child td { border-bottom: none; }
+
+        .kv-status-ok { color: #22c55e; }
+        .kv-status-warn { color: #f59e0b; }
+        .kv-status-danger { color: #ef4444; }
+
+        .kv-reminder {
+            display: none;
+            margin-top: 16px;
+            padding: 14px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            border-radius: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .kv-reminder.active { display: block; }
+
+        .kv-input-area {
+            margin-top: 16px;
+        }
+
+        .kv-input-area textarea {
+            width: 100%;
+            min-height: 160px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="nav-logo">
+                <span class="logo-icon">◆</span>
+                <span class="logo-text">李子木</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="/index.html" class="nav-link">首页</a></li>
+                <li><a href="/blog.html" class="nav-link">博客</a></li>
+                <li><a href="/tools.html" class="nav-link active">工具</a></li>
+                <li><a href="/index.html#about" class="nav-link">关于</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <section class="page-header" style="padding: 120px 0 32px;">
+        <div class="container">
+            <span class="section-label">SmartCS</span>
+            <h1 class="page-title" style="font-size: 36px; margin-bottom: 12px;">🎙️ 知识库语音化转换</h1>
+            <p class="page-subtitle" style="font-size: 16px; color: var(--text-secondary);">
+                文本/HTML 知识原件 → 语音化原子问答 → 下游平台 xlsx 导入文件
+            </p>
+        </div>
+    </section>
+
+    <section class="section" style="padding-top: 0;">
+        <div class="container">
+            <div class="kv-tabs">
+                <a href="/tools/smartcs-coldstart/" class="kv-tab">对话冷启动</a>
+                <a href="/tools/colloquial-knowledge.html" class="kv-tab active">知识库语音化 ✨</a>
+            </div>
+
+            <div class="kv-layout">
+                <aside class="kv-sidebar">
+                    <h3>转换配置</h3>
+                    <div class="kv-field">
+                        <label for="companyName">品牌名称 *</label>
+                        <input type="text" id="companyName" placeholder="示例品牌" value="">
+                    </div>
+                    <div class="kv-field">
+                        <label for="companyBrief">业务背景</label>
+                        <textarea id="companyBrief" placeholder="如：智能出行设备"></textarea>
+                    </div>
+                    <div class="kv-field">
+                        <label for="docType">文档类型</label>
+                        <select id="docType">
+                            <option value="mixed">混合文档</option>
+                            <option value="param_faq">产品参数 FAQ</option>
+                            <option value="activity">营销活动话术</option>
+                            <option value="service">售后服务政策</option>
+                        </select>
+                    </div>
+                    <div class="kv-field">
+                        <label for="maxAnswerLength">答案字数上限</label>
+                        <input type="number" id="maxAnswerLength" min="50" max="500" value="120">
+                    </div>
+                    <div class="kv-field">
+                        <label for="categoryDepth">目录层级</label>
+                        <input type="number" id="categoryDepth" min="1" max="3" value="2">
+                    </div>
+                    <div class="kv-field">
+                        <label for="similarCount">相似问数量/条</label>
+                        <input type="number" id="similarCount" min="1" max="15" value="8">
+                    </div>
+                    <div class="kv-field">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="enableLLMEnhance" style="width:auto;">
+                            AI 增强（可选，默认仅用内置规则）
+                        </label>
+                    </div>
+                    <div class="kv-field">
+                        <label>上传文件</label>
+                        <label class="kv-file-zone" for="fileInput">
+                            <div>📁 点击上传</div>
+                            <div style="margin-top:6px;font-size:12px;">.txt .md .csv .xlsx</div>
+                            <input type="file" id="fileInput" accept=".txt,.md,.csv,.xlsx,.xls">
+                        </label>
+                        <div id="fileName" style="font-size:12px;color:var(--text-secondary);margin-top:6px;"></div>
+                    </div>
+                    <button class="kv-btn primary" id="startBtn" onclick="startTransform()">开始转换</button>
+                </aside>
+
+                <main class="kv-main">
+                    <div id="emptyState" class="kv-empty">
+                        <div class="kv-empty-icon">📚</div>
+                        <p>上传知识库文件，或在下方粘贴文本内容</p>
+                        <p style="font-size:13px;margin-top:8px;">支持将整份文档拆解为可播报的原子问答，并导出平台 xlsx</p>
+                    </div>
+
+                    <div class="kv-input-area">
+                        <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">或直接粘贴文本/HTML 内容</label>
+                        <textarea id="rawText" placeholder="粘贴产品参数 FAQ、活动话术、售后政策等...
+
+示例：
+标准问: 某系列参数FAQ | 产品线A
+答案: [HTML 富文本内容]
+
+1. 标准版有哪些颜色？
+2. 标准版的净重是多少？"></textarea>
+                    </div>
+
+                    <div class="kv-progress" id="progressPanel">
+                        <div id="progressText" style="font-size:14px;color:var(--text-secondary);">准备中...</div>
+                        <div class="kv-progress-bar"><div class="kv-progress-fill" id="progressFill"></div></div>
+                    </div>
+
+                    <div class="kv-stats" id="statsPanel">
+                        <div class="kv-stat"><div class="kv-stat-num" id="statEntries">0</div><div class="kv-stat-label">知识条目</div></div>
+                        <div class="kv-stat"><div class="kv-stat-num" id="statSimilar">0</div><div class="kv-stat-label">相似问</div></div>
+                        <div class="kv-stat"><div class="kv-stat-num" id="statMerged">0</div><div class="kv-stat-label">去重合并</div></div>
+                        <div class="kv-stat"><div class="kv-stat-num" id="statConflict">0</div><div class="kv-stat-label">冲突</div></div>
+                        <div class="kv-stat"><div class="kv-stat-num" id="statHuman">0</div><div class="kv-stat-label">需人工</div></div>
+                        <div class="kv-stat"><div class="kv-stat-num" id="statTime">0s</div><div class="kv-stat-label">耗时</div></div>
+                    </div>
+
+                    <div class="kv-toolbar" id="toolbar">
+                        <button class="kv-btn primary" onclick="downloadXlsx()">⬇️ 下载 xlsx 导入文件</button>
+                        <button class="kv-btn" onclick="downloadJSON()">⬇️ 下载 JSON</button>
+                    </div>
+
+                    <div class="kv-table-wrap" id="tableWrap">
+                        <table class="kv-table">
+                            <thead>
+                                <tr>
+                                    <th>目录</th>
+                                    <th>标准问</th>
+                                    <th>答案</th>
+                                    <th>字数</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="kv-reminder" id="importReminder">
+                        💡 文件导入平台后，请将问答状态设置为「已上线」，大模型问答功能方可生效。
+                    </div>
+                </main>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand"><span class="logo-icon">◆</span><span>李子木</span></div>
+                <div class="footer-links">
+                    <a href="https://github.com/sunhuaili2026" target="_blank">GitHub</a>
+                    <a href="mailto:sunhuaili2025@gmail.com">Email</a>
+                </div>
+            </div>
+            <div class="footer-bottom"><p>&copy; 2026 李子木. All rights reserved.</p></div>
+        </div>
+    </footer>
+
+    <script src="../script.js"></script>
+    <script src="knowledge-voice/textProcessingRules.js"></script>
+    <script src="knowledge-voice/localKnowledgeEngine.js"></script>
+    <script src="knowledge-voice/knowledgeTransformPrompts.js"></script>
+    <script src="knowledge-voice/platformExport.js"></script>
+    <script src="knowledge-voice/knowledgeTransform.js"></script>
+    <script>
+        let lastResult = null;
+        let uploadedText = '';
+
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('fileName').textContent = file.name;
+            try {
+                uploadedText = await KVTransform.parseUploadedFile(file);
+                document.getElementById('rawText').value = uploadedText.slice(0, 5000) + (uploadedText.length > 5000 ? '\n...(已截断预览)' : '');
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        function getConfig() {
+            const companyName = document.getElementById('companyName').value.trim();
+            if (!companyName) throw new Error('请填写品牌名称');
+            return {
+                companyName,
+                companyBrief: document.getElementById('companyBrief').value.trim(),
+                docType: document.getElementById('docType').value,
+                maxAnswerLength: +document.getElementById('maxAnswerLength').value || 120,
+                maxAnswerTurns: 5,
+                categoryDepth: +document.getElementById('categoryDepth').value || 2,
+                similarQuestionsPerEntry: +document.getElementById('similarCount').value || 8,
+                generateSimilarQuestions: true,
+                generateRegexSimilar: false,
+                enableLLMEnhance: document.getElementById('enableLLMEnhance').checked
+            };
+        }
+
+        const PHASE_PROGRESS = {
+            parsing: 10, extracting: 35, voiceifying: 65,
+            deduplicating: 80, generating_similar: 92, exporting: 100
+        };
+
+        function updateProgress(p) {
+            document.getElementById('progressPanel').classList.add('active');
+            document.getElementById('progressText').textContent = p.message || p.phase;
+            document.getElementById('progressFill').style.width = (PHASE_PROGRESS[p.phase] || 50) + '%';
+        }
+
+        function renderResult(result) {
+            lastResult = result;
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('statsPanel').classList.add('active');
+            document.getElementById('toolbar').classList.add('active');
+            document.getElementById('tableWrap').classList.add('active');
+            document.getElementById('importReminder').classList.add('active');
+
+            document.getElementById('statEntries').textContent = result.stats.totalEntries || result.entries.length;
+            document.getElementById('statSimilar').textContent = result.stats.totalSimilarQuestions || 0;
+            document.getElementById('statMerged').textContent = result.audit.mergedCount || 0;
+            document.getElementById('statConflict').textContent = (result.audit.conflicts || []).length;
+            document.getElementById('statHuman').textContent = result.stats.humanRequiredCount || 0;
+            document.getElementById('statTime').textContent = Math.round((result.stats.processingTimeMs || 0) / 1000) + 's';
+
+            const tbody = document.getElementById('previewBody');
+            tbody.innerHTML = result.entries.slice(0, 100).map(entry => {
+                const answer = (entry.answerTurns || []).join(' ');
+                const len = answer.length;
+                let status = '<span class="kv-status-ok">✅</span>';
+                if (entry.conflict) status = '<span class="kv-status-warn">⚠️ 冲突</span>';
+                else if (entry.needsHuman) status = '<span class="kv-status-danger">⚠️ 人工</span>';
+                const turns = (entry.answerTurns || []).length;
+                const turnBadge = turns > 1 ? ` (${turns}轮)` : '';
+                return `<tr>
+                    <td>${esc(entry.categoryPath)}</td>
+                    <td>${esc(entry.standardQuestion)}</td>
+                    <td>${esc(answer)}${turnBadge}</td>
+                    <td>${len}字</td>
+                    <td>${status}</td>
+                </tr>`;
+            }).join('');
+
+            if (result.entries.length > 100) {
+                tbody.innerHTML += `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);">... 还有 ${result.entries.length - 100} 条，请导出 xlsx 查看完整结果</td></tr>`;
+            }
+        }
+
+        function esc(text) {
+            const d = document.createElement('div');
+            d.textContent = text || '';
+            return d.innerHTML;
+        }
+
+        async function startTransform() {
+            const text = uploadedText || document.getElementById('rawText').value.trim();
+            if (!text) { alert('请上传文件或粘贴知识内容'); return; }
+
+            let config;
+            try { config = getConfig(); } catch (e) { alert(e.message); return; }
+
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            btn.textContent = '转换中...';
+            document.getElementById('progressPanel').classList.add('active');
+            document.getElementById('statsPanel').classList.remove('active');
+            document.getElementById('toolbar').classList.remove('active');
+            document.getElementById('tableWrap').classList.remove('active');
+
+            try {
+                const result = await KVTransform.transformKnowledgeToVoice(text, config, updateProgress);
+                renderResult(result);
+                updateProgress({ phase: 'exporting', message: '转换完成！' });
+            } catch (err) {
+                alert('转换失败：' + err.message);
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '开始转换';
+            }
+        }
+
+        function downloadXlsx() {
+            if (!lastResult) return;
+            try {
+                const config = getConfig();
+                KVPlatformExport.exportToPlatformXlsx(lastResult, config);
+            } catch (e) {
+                alert('导出失败：' + e.message);
+            }
+        }
+
+        function downloadJSON() {
+            if (!lastResult) return;
+            const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'knowledge-transform-result.json';
+            a.click();
+        }
+    </script>
+</body>
+</html>

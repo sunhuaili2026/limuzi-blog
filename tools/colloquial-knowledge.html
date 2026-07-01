@@ -343,6 +343,12 @@
                         <input type="number" id="similarCount" min="1" max="15" value="8">
                     </div>
                     <div class="kv-field">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="enableLLMEnhance" style="width:auto;">
+                            AI 增强（可选，默认仅用内置规则）
+                        </label>
+                    </div>
+                    <div class="kv-field">
                         <label>上传文件</label>
                         <label class="kv-file-zone" for="fileInput">
                             <div>📁 点击上传</div>
@@ -430,6 +436,7 @@
 
     <script src="../script.js"></script>
     <script src="knowledge-voice/textProcessingRules.js"></script>
+    <script src="knowledge-voice/localKnowledgeEngine.js"></script>
     <script src="knowledge-voice/knowledgeTransformPrompts.js"></script>
     <script src="knowledge-voice/platformExport.js"></script>
     <script src="knowledge-voice/knowledgeTransform.js"></script>
@@ -461,7 +468,8 @@
                 categoryDepth: +document.getElementById('categoryDepth').value || 2,
                 similarQuestionsPerEntry: +document.getElementById('similarCount').value || 8,
                 generateSimilarQuestions: true,
-                generateRegexSimilar: false
+                generateRegexSimilar: false,
+                enableLLMEnhance: document.getElementById('enableLLMEnhance').checked
             };
         }
 

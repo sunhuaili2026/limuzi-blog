@@ -1,7 +1,8 @@
-/** 主流程编排 — knowledgeTransformService */
+/** 主流程编排 — 内置规则优先，LLM 可选增强 */
 (function (global) {
   const { preprocessText, applyLayer1ToEntry, chunkText, ensureCategoryPath } = global.KVTextRules;
   const { buildExtractPrompt, buildVoiceifyPrompt, buildDedupPrompt, buildSimilarQuestionsPrompt } = global.KVPrompts;
+  const Local = global.KVLocalEngine;
 
   function safeJsonParse(content) {
     const match = content.match(/\{[\s\S]*\}/);
@@ -48,174 +49,188 @@
   }
 
   async function phase1Extract(text, config, onProgress) {
+    onProgress?.({ phase: 'extracting', message: '内置规则拆解中...' });
+    const localFindings = Local.localExtractFindings(text, config);
+
+    if (!config.enableLLMEnhance || !Local.needsLLMExtraction(text, localFindings)) {
+      onProgress?.({
+        phase: 'extracting',
+        message: `内置规则提取完成（${localFindings.length} 条）`
+      });
+      return localFindings;
+    }
+
+    onProgress?.({ phase: 'extracting', message: '内置规则不足，AI 补充拆解...' });
     const preprocessed = preprocessText(text, config);
     const chunks = chunkText(preprocessed);
-    const allFindings = [];
+    const llmFindings = [];
 
     for (let i = 0; i < chunks.length; i++) {
       onProgress?.({
         phase: 'extracting',
         currentChunk: i + 1,
         totalChunks: chunks.length,
-        message: `正在提取知识条目 (${i + 1}/${chunks.length})...`
+        message: `AI 补充提取 (${i + 1}/${chunks.length})...`
       });
-
-      const prompt = buildExtractPrompt(config, chunks[i], i, chunks.length);
-      const content = await callLLM([
-        { role: 'user', content: prompt }
-      ]);
-      const parsed = safeJsonParse(content);
-      (parsed.findings || []).forEach(f => allFindings.push(rawToFinding(f, config)));
-      if (i < chunks.length - 1) await sleep(800);
+      try {
+        const prompt = buildExtractPrompt(config, chunks[i], i, chunks.length);
+        const content = await callLLM([{ role: 'user', content: prompt }]);
+        const parsed = safeJsonParse(content);
+        (parsed.findings || []).forEach(f => llmFindings.push(rawToFinding(f, config)));
+      } catch (e) {
+        console.warn('LLM extract chunk failed', e);
+      }
+      if (i < chunks.length - 1) await sleep(600);
     }
 
-    return allFindings;
+    return llmFindings.length ? llmFindings : localFindings;
   }
 
   async function phase2Voiceify(findings, config, onProgress) {
-    const batchSize = 8;
-    const entries = [];
+    onProgress?.({ phase: 'voiceifying', message: '内置规则语音化改写中...' });
+    let entries = Local.localVoiceifyFindings(findings, config);
 
-    for (let i = 0; i < findings.length; i += batchSize) {
-      const batch = findings.slice(i, i + batchSize);
+    if (!config.enableLLMEnhance) {
       onProgress?.({
         phase: 'voiceifying',
-        currentChunk: Math.floor(i / batchSize) + 1,
-        totalChunks: Math.ceil(findings.length / batchSize),
-        processedEntries: entries.length,
-        message: `正在语音化改写 (${Math.min(i + batchSize, findings.length)}/${findings.length})...`
+        message: `内置规则语音化完成（${entries.length} 条）`
       });
+      return entries;
+    }
 
-      const layer1Batch = batch.map(f => applyLayer1ToEntry({
-        categoryPath: f.categoryPath,
-        question: f.question,
-        answer: f.answer,
-        keywords: f.keywords,
-        sourceExcerpt: f.sourceExcerpt
-      }, config));
+    const complex = findings.filter((f, i) => Local.needsLLMVoiceify({
+      ...f,
+      answerTurns: entries[i]?.answerTurns
+    }));
 
+    if (!complex.length) return entries;
+
+    onProgress?.({
+      phase: 'voiceifying',
+      message: `AI 增强改写复杂条目 (${complex.length} 条)...`
+    });
+
+    const batchSize = 8;
+    for (let i = 0; i < complex.length; i += batchSize) {
+      const batch = complex.slice(i, i + batchSize);
       try {
         const prompt = buildVoiceifyPrompt(config, batch);
         const content = await callLLM([{ role: 'user', content: prompt }]);
         const parsed = safeJsonParse(content);
-        if (parsed.entries?.length) {
-          parsed.entries.forEach(e => {
-            const refined = applyLayer1ToEntry({
-              categoryPath: e.categoryPath,
-              question: e.standardQuestion,
-              answer: (e.answerTurns || []).join(''),
-              summary: e.summary,
-              keywords: e.keywords,
-              sourceExcerpt: e.sourceExcerpt
-            }, config);
-            entries.push({
-              ...refined,
-              standardQuestion: e.standardQuestion || refined.standardQuestion,
-              summary: e.summary || refined.summary,
-              answerTurns: e.answerTurns?.length ? e.answerTurns : refined.answerTurns,
-              needsHuman: e.needsHuman || refined.needsHuman,
-              transferReason: e.transferReason || refined.transferReason
-            });
-          });
-        } else {
-          entries.push(...layer1Batch);
-        }
-      } catch {
-        entries.push(...layer1Batch);
+        (parsed.entries || []).forEach(e => {
+          const idx = entries.findIndex(x => x.standardQuestion === e.standardQuestion);
+          const refined = applyLayer1ToEntry({
+            categoryPath: e.categoryPath,
+            question: e.standardQuestion,
+            answer: (e.answerTurns || []).join(''),
+            summary: e.summary,
+            keywords: e.keywords,
+            sourceExcerpt: e.sourceExcerpt
+          }, config);
+          const merged = {
+            ...refined,
+            standardQuestion: e.standardQuestion || refined.standardQuestion,
+            summary: e.summary || refined.summary,
+            answerTurns: e.answerTurns?.length ? e.answerTurns : refined.answerTurns,
+            needsHuman: e.needsHuman || refined.needsHuman
+          };
+          if (idx >= 0) entries[idx] = merged;
+          else entries.push(merged);
+        });
+      } catch (e) {
+        console.warn('LLM voiceify batch failed', e);
       }
-
-      await sleep(600);
+      await sleep(400);
     }
 
     return entries;
   }
 
   async function phase3Dedup(entries, config, onProgress) {
-    onProgress?.({ phase: 'deduplicating', message: '正在去重审核...' });
+    onProgress?.({ phase: 'deduplicating', message: '内置规则去重审核中...' });
+    const localResult = Local.localDedupEntries(entries, config);
 
-    if (entries.length <= 1) {
-      return {
-        entries,
-        audit: { removedCount: 0, mergedCount: 0, conflicts: [] },
-        stats: buildStats(entries)
-      };
+    if (!config.enableLLMEnhance || entries.length <= 30) {
+      return localResult;
     }
 
+    onProgress?.({ phase: 'deduplicating', message: 'AI 语义去重补充...' });
     try {
-      const prompt = buildDedupPrompt(config, entries);
-      const content = await callLLM([
-        { role: 'user', content: prompt }
-      ], 'deepseek-chat');
+      const prompt = buildDedupPrompt(config, localResult.entries);
+      const content = await callLLM([{ role: 'user', content: prompt }]);
       const parsed = safeJsonParse(content);
-      const deduped = parsed.entries?.length ? parsed.entries.map(e => applyLayer1ToEntry({
-        categoryPath: e.categoryPath,
-        question: e.standardQuestion,
-        answer: (e.answerTurns || []).join(''),
-        summary: e.summary,
-        keywords: e.keywords,
-        sourceExcerpt: e.sourceExcerpt
-      }, config)).map((e, idx) => ({
-        ...e,
-        standardQuestion: parsed.entries[idx].standardQuestion || e.standardQuestion,
-        summary: parsed.entries[idx].summary || e.summary,
-        answerTurns: parsed.entries[idx].answerTurns || e.answerTurns,
-        needsHuman: parsed.entries[idx].needsHuman ?? e.needsHuman,
-        conflict: parsed.entries[idx].conflict ?? false
-      })) : entries;
+      if (!parsed.entries?.length) return localResult;
+
+      const deduped = parsed.entries.map((e, idx) => {
+        const base = applyLayer1ToEntry({
+          categoryPath: e.categoryPath,
+          question: e.standardQuestion,
+          answer: (e.answerTurns || []).join(''),
+          summary: e.summary,
+          keywords: e.keywords,
+          sourceExcerpt: e.sourceExcerpt
+        }, config);
+        return {
+          ...base,
+          standardQuestion: e.standardQuestion || base.standardQuestion,
+          summary: e.summary || base.summary,
+          answerTurns: e.answerTurns || base.answerTurns,
+          needsHuman: e.needsHuman ?? base.needsHuman,
+          conflict: e.conflict ?? false
+        };
+      });
 
       return {
         entries: deduped,
         audit: {
-          removedCount: parsed.removedCount || 0,
-          mergedCount: parsed.mergedCount || 0,
-          conflicts: parsed.conflicts || []
+          removedCount: (localResult.audit.removedCount || 0) + (parsed.removedCount || 0),
+          mergedCount: (localResult.audit.mergedCount || 0) + (parsed.mergedCount || 0),
+          conflicts: [...(localResult.audit.conflicts || []), ...(parsed.conflicts || [])]
         },
-        stats: parsed.stats || buildStats(deduped)
+        stats: parsed.stats || Local.buildStats(deduped)
       };
     } catch {
-      return {
-        entries,
-        audit: { removedCount: 0, mergedCount: 0, conflicts: [] },
-        stats: buildStats(entries)
-      };
+      return localResult;
     }
   }
 
   async function phase5SimilarQuestions(entries, config, onProgress) {
     if (!config.generateSimilarQuestions) return [];
 
-    onProgress?.({ phase: 'generating_similar', message: '正在生成相似问...' });
+    onProgress?.({ phase: 'generating_similar', message: '内置规则生成相似问...' });
+    const localSimilar = Local.localGenerateSimilarQuestions(entries, config);
 
+    if (!config.enableLLMEnhance) return localSimilar;
+
+    onProgress?.({ phase: 'generating_similar', message: 'AI 补充相似问...' });
     try {
-      const prompt = buildSimilarQuestionsPrompt(config, entries);
+      const prompt = buildSimilarQuestionsPrompt(config, entries.slice(0, 30));
       const content = await callLLM([{ role: 'user', content: prompt }]);
       const parsed = safeJsonParse(content);
-      return parsed.similarQuestions || [];
-    } catch {
-      return entries.slice(0, 20).map(e => ({
-        categoryPath: e.categoryPath,
-        standardQuestion: e.standardQuestion,
-        type: '用户相似问',
-        phrases: [e.standardQuestion.replace(/[？?]$/, ''), '请问' + e.standardQuestion.slice(0, 12)]
-      }));
-    }
-  }
+      const llmSimilar = parsed.similarQuestions || [];
+      if (!llmSimilar.length) return localSimilar;
 
-  function buildStats(entries) {
-    const lengths = entries.flatMap(e => e.answerTurns || []).map(t => t.length);
-    return {
-      totalEntries: entries.length,
-      humanRequiredCount: entries.filter(e => e.needsHuman).length,
-      avgAnswerLength: lengths.length ? Math.round(lengths.reduce((a, b) => a + b, 0) / lengths.length) : 0,
-      multiTurnCount: entries.filter(e => (e.answerTurns || []).length > 1).length
-    };
+      const map = new Map(localSimilar.map(s => [s.standardQuestion, s]));
+      llmSimilar.forEach(sq => {
+        if (map.has(sq.standardQuestion)) {
+          const existing = map.get(sq.standardQuestion);
+          existing.phrases = [...new Set([...(existing.phrases || []), ...(sq.phrases || [])])]
+            .slice(0, config.similarQuestionsPerEntry || 8);
+        } else {
+          map.set(sq.standardQuestion, sq);
+        }
+      });
+      return [...map.values()];
+    } catch {
+      return localSimilar;
+    }
   }
 
   async function transformKnowledgeToVoice(rawText, config, onProgress) {
     const start = Date.now();
 
-    onProgress?.({ phase: 'parsing', message: '正在解析文件结构...' });
-    await sleep(300);
+    onProgress?.({ phase: 'parsing', message: '正在解析文件结构（内置规则）...' });
+    await sleep(200);
 
     const findings = await phase1Extract(rawText, config, onProgress);
     if (!findings.length) {
@@ -228,13 +243,17 @@
 
     const similarQuestions = await phase5SimilarQuestions(entries, config, onProgress);
 
-    onProgress?.({ phase: 'exporting', message: '转换完成，可预览并导出' });
+    onProgress?.({
+      phase: 'exporting',
+      message: config.enableLLMEnhance ? '转换完成（内置 + AI 增强）' : '转换完成（内置规则）'
+    });
 
     const stats = {
       ...dedupResult.stats,
       totalSourceDocs: 1,
       totalSimilarQuestions: similarQuestions.reduce((n, sq) => n + (sq.phrases?.length || 0), 0),
-      processingTimeMs: Date.now() - start
+      processingTimeMs: Date.now() - start,
+      processingMode: config.enableLLMEnhance ? 'builtin+llm' : 'builtin'
     };
 
     return {

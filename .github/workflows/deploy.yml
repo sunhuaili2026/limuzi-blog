@@ -13,6 +13,21 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Check deploy secrets
+        run: |
+          missing=0
+          [ -z "${{ secrets.SSH_HOST }}" ] && echo "❌ 缺少 Secret: SSH_HOST（填 111.229.212.20）" && missing=1
+          [ -z "${{ secrets.SSH_USER }}" ] && echo "❌ 缺少 Secret: SSH_USER（填 root）" && missing=1
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ] && [ -z "${{ secrets.SSH_PASSWORD }}" ]; then
+            echo "❌ 缺少 Secret: SSH_PASSWORD 或 SSH_PRIVATE_KEY（二选一）"
+            missing=1
+          fi
+          if [ "$missing" -eq 1 ]; then
+            echo "请到 Settings → Secrets and variables → Actions → Repository secrets 添加"
+            exit 1
+          fi
+          echo "✅ Secrets 已配置，开始部署..."
+
       - name: Deploy to Tencent Cloud via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:

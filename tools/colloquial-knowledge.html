@@ -443,18 +443,45 @@
     <script>
         let lastResult = null;
         let uploadedText = '';
+        let uploadedFile = null;
 
         document.getElementById('fileInput').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            document.getElementById('fileName').textContent = file.name;
+            uploadedFile = file;
+            document.getElementById('fileName').textContent = '正在解析 ' + file.name + '...';
             try {
                 uploadedText = await KVTransform.parseUploadedFile(file);
-                document.getElementById('rawText').value = uploadedText.slice(0, 5000) + (uploadedText.length > 5000 ? '\n...(已截断预览)' : '');
+                const count = (uploadedText.match(/问[：:]/g) || []).length;
+                document.getElementById('fileName').textContent = `✅ ${file.name}（已解析 ${count} 条）`;
+                if (uploadedText.length > 5000) {
+                    document.getElementById('rawText').value = uploadedText.slice(0, 5000) + '\n...(预览已截断，转换将使用完整文件内容)';
+                } else {
+                    document.getElementById('rawText').value = uploadedText;
+                }
             } catch (err) {
-                alert(err.message);
+                uploadedText = '';
+                uploadedFile = null;
+                document.getElementById('fileName').textContent = '❌ ' + file.name + ' 解析失败';
+                document.getElementById('rawText').value = '';
+                alert(err.message || '文件解析失败');
             }
         });
+
+        async function resolveInputText() {
+            if (uploadedFile) {
+                try {
+                    uploadedText = await KVTransform.parseUploadedFile(uploadedFile);
+                    return uploadedText;
+                } catch (err) {
+                    throw new Error('文件解析失败：' + err.message);
+                }
+            }
+            const raw = document.getElementById('rawText').value.trim();
+            if (raw && !raw.includes('...(预览已截断')) return raw;
+            if (uploadedText) return uploadedText;
+            return raw.replace(/\n\.\.\.\(预览已截断.*$/, '').trim();
+        }
 
         function getConfig() {
             const companyName = document.getElementById('companyName').value.trim();
@@ -529,8 +556,17 @@
         }
 
         async function startTransform() {
-            const text = uploadedText || document.getElementById('rawText').value.trim();
-            if (!text) { alert('请上传文件或粘贴知识内容'); return; }
+            let text = '';
+            try {
+                text = await resolveInputText();
+            } catch (e) {
+                alert(e.message);
+                return;
+            }
+            if (!text) {
+                alert('请上传文件或粘贴知识内容\n\n提示：文本框中的灰色文字是示例，不是已上传的内容。');
+                return;
+            }
 
             let config;
             try { config = getConfig(); } catch (e) { alert(e.message); return; }

@@ -292,19 +292,35 @@
   /** 解析平台 xlsx：合并多行答案，不把分类标签当答案 */
   function parsePlatformXlsxRows(rows) {
     const R = global.KVTextRules;
-    const dataRows = rows.slice(3);
+    const startRow = findXlsxDataStartRow(rows);
+    const dataRows = rows.slice(startRow);
     const blocks = [];
     let current = null;
 
     dataRows.forEach(row => {
-      const cat = String(row[0] || '').trim();
-      const q = String(row[1] || '').trim();
-      const summary = String(row[3] || '').trim();
-      const answer = String(row[5] || '').trim();
+      if (!row || !row.some(cell => String(cell || '').trim())) return;
+
+      const cols = normalizeXlsxRow(row);
+      const cat = cols.category;
+      const q = cols.question;
+      const summary = cols.summary;
+      let answer = cols.answer;
+
+      // 答案列若仅为标签，尝试从后续列或简介中找实质内容
+      if ((!answer || R.isCategoryTagOnly(answer)) && cols.answerAlt) {
+        answer = cols.answerAlt;
+      }
+      if ((!answer || R.isCategoryTagOnly(answer)) && summary && !R.isCategoryTagOnly(summary) && summary.length > 8) {
+        answer = summary;
+      }
 
       if (q) {
         if (current) blocks.push(current);
         current = { cat, q, summary, answers: [] };
+      } else if (answer && current) {
+        // 续行：仅答案列有内容
+        if (!R.isCategoryTagOnly(answer)) current.answers.push(answer);
+        return;
       }
       if (!current) return;
 
@@ -317,23 +333,66 @@
     });
     if (current) blocks.push(current);
 
-    return blocks.map(b => {
+    const text = blocks.map(b => {
       let fullAnswer = b.answers.join('').trim();
       fullAnswer = R.stripCategoryTagsFromAnswer(fullAnswer);
-      if (!fullAnswer && b.summary && !R.isCategoryTagOnly(b.summary)) {
+      if (!fullAnswer && b.summary && !R.isCategoryTagOnly(b.summary) && b.summary.length > 8) {
         fullAnswer = R.stripCategoryTagsFromAnswer(b.summary);
       }
       if (!fullAnswer) return '';
-      const tag = b.answers.find(a => R.isCategoryTagOnly(a)) || R.extractCategoryTag(b.summary);
-      let text = `【${b.cat || '通用'}】\n问：${b.q}\n答：${fullAnswer}`;
-      if (tag) text += `\n分类：${tag}`;
-      return text;
+      const tag = R.extractCategoryTag(b.summary) || b.answers.find(a => R.isCategoryTagOnly(a));
+      let block = `【${b.cat || '通用'}】\n问：${b.q}\n答：${fullAnswer}`;
+      if (tag) block += `\n分类：${tag}`;
+      return block;
     }).filter(Boolean).join('\n\n');
+
+    if (!text) {
+      throw new Error('Excel 解析结果为空：未找到有效的「标准问 + 答案内容」。请确认文件含「问答知识」Sheet，且答案列有实质内容（不能只有【分类】标签）。');
+    }
+    return text;
+  }
+
+  function findXlsxDataStartRow(rows) {
+    for (let i = 0; i < Math.min(rows.length, 20); i++) {
+      const row = rows[i] || [];
+      const line = row.map(c => String(c || '')).join('|');
+      if (line.includes('标准问') && (line.includes('答案') || line.includes('所属目录'))) {
+        // 双行表头：下一行可能是标签示例，再下一行才是数据
+        const next = rows[i + 1] || [];
+        const nextLine = next.map(c => String(c || '')).join('|');
+        if (nextLine.includes('纯文本') || nextLine.includes('知识标签')) return i + 2;
+        return i + 1;
+      }
+    }
+    return 3;
+  }
+
+  function normalizeXlsxRow(row) {
+    const cells = row.map(c => String(c ?? '').trim());
+    // 平台模板：A目录 B标准问 D简介 F答案 G超限
+    if (cells[1] && (cells[1].includes('？') || cells[1].includes('?') || cells[1].length > 4)) {
+      return {
+        category: cells[0],
+        question: cells[1],
+        summary: cells[3] || '',
+        answer: cells[5] || cells[4] || '',
+        answerAlt: cells[6] || ''
+      };
+    }
+    // 通用三列：目录/问题/答案
+    return {
+      category: cells[0] || '通用',
+      question: cells[1] || cells[0],
+      summary: '',
+      answer: cells[2] || cells[1] || '',
+      answerAlt: cells[3] || ''
+    };
   }
 
   global.KVTransform = {
     transformKnowledgeToVoice,
     parseUploadedFile,
+    parsePlatformXlsxRows,
     safeJsonParse
   };
 })(window);

@@ -115,44 +115,50 @@
       return entries;
     }
 
-    const ranked = getLocalEngine().rankForLLM(findings, entries);
-    if (!ranked.length) {
-      onProgress?.({ phase: 'voiceifying', message: '内置规则完成（' + entries.length + ' 条，质量已达标）' });
-      return entries;
+    const maxLlm = config.llmVoiceifyMaxEntries;
+    let toProcess;
+    let llmCandidates = findings.length;
+    if (maxLlm > 0) {
+      const ranked = getLocalEngine().rankForLLM(findings, entries);
+      if (!ranked.length) {
+        onProgress?.({ phase: 'voiceifying', message: '内置规则完成（' + entries.length + ' 条，质量已达标）' });
+        return entries;
+      }
+      llmCandidates = ranked.length;
+      toProcess = ranked.slice(0, maxLlm);
+    } else {
+      toProcess = findings.map((f, i) => ({ finding: f, index: i }));
     }
-
-    const maxLlm = config.llmVoiceifyMaxEntries || 500;
-    const toProcess = ranked.slice(0, maxLlm);
-    const llmSkipped = ranked.length - toProcess.length;
+    const llmSkipped = llmCandidates - toProcess.length;
 
     onProgress?.({
       phase: 'voiceifying',
-      message: 'AI 大模型精修中 (' + toProcess.length + '/' + ranked.length + ' 条，请稍候)...'
+      message: 'AI 大模型逐条精修中 (0/' + toProcess.length + '，请保持页面打开)...'
     });
 
-    const batchSize = 5;
-    for (let i = 0; i < toProcess.length; i += batchSize) {
-      const batchItems = toProcess.slice(i, i + batchSize);
-      const batchPayload = batchItems.map(({ finding }) => ({
-        categoryPath: finding.categoryPath,
-        question: finding.question,
-        answer: stripHtml(finding.answer || '').slice(0, 1200),
-        keywords: finding.keywords,
-        sourceExcerpt: finding.sourceExcerpt
-      }));
+    const llmDelayMs = config.llmRequestDelayMs || 400;
+    for (let i = 0; i < toProcess.length; i++) {
+      const item = toProcess[i];
+      const batchPayload = [{
+        categoryPath: item.finding.categoryPath,
+        question: item.finding.question,
+        answer: stripHtml(item.finding.answer || '').slice(0, 1200),
+        keywords: item.finding.keywords,
+        sourceExcerpt: item.finding.sourceExcerpt
+      }];
 
       onProgress?.({
         phase: 'voiceifying',
-        message: 'AI 大模型精修中 (' + Math.min(i + batchSize, toProcess.length) + '/' + toProcess.length + ')...'
+        message: 'AI 大模型逐条精修中 (' + (i + 1) + '/' + toProcess.length + ')...'
       });
 
       try {
         const prompt = buildVoiceifyPrompt(config, batchPayload);
         const content = await callLLM([{ role: 'user', content: prompt }]);
         const parsed = safeJsonParse(content);
-        (parsed.entries || []).forEach((e, bi) => {
-          const targetIdx = batchItems[bi]?.index;
-          if (targetIdx == null || targetIdx < 0) return;
+        const e = (parsed.entries || [])[0];
+        const targetIdx = item.index;
+        if (e && targetIdx >= 0) {
           const refined = applyLayer1ToEntry({
             categoryPath: e.categoryPath || findings[targetIdx].categoryPath,
             question: e.standardQuestion || findings[targetIdx].question,
@@ -171,18 +177,18 @@
             needsHuman: e.needsHuman || refined.needsHuman,
             _llmRefined: true
           };
-        });
+        }
       } catch (e) {
-        console.warn('LLM voiceify batch failed', e);
+        console.warn('LLM voiceify entry failed', item.index, e);
       }
-      await sleep(500);
+      if (i < toProcess.length - 1) await sleep(llmDelayMs);
     }
 
-    if (llmSkipped > 0) {
-      entries.llmMeta = { llmSkipped, llmProcessed: toProcess.length, llmCandidates: ranked.length };
-    } else {
-      entries.llmMeta = { llmSkipped: 0, llmProcessed: toProcess.length, llmCandidates: ranked.length };
-    }
+    entries.llmMeta = {
+      llmSkipped,
+      llmProcessed: toProcess.length,
+      llmCandidates: maxLlm > 0 ? toProcess.length + llmSkipped : findings.length
+    };
 
     return entries;
   }
@@ -303,12 +309,12 @@
     if (llmMeta?.llmSkipped > 0) {
       warnings.push({
         type: 'llm_cap',
-        message: 'AI 大模型已精修 ' + llmMeta.llmProcessed + ' 条（优先处理质量最差的条目），另有 ' + llmMeta.llmSkipped + ' 条仍用内置深度口语化（单次上限 ' + (config.llmVoiceifyMaxEntries || 500) + ' 条）。'
+        message: 'AI 大模型已逐条精修 ' + llmMeta.llmProcessed + ' 条，另有 ' + llmMeta.llmSkipped + ' 条仍用内置深度口语化（单次上限 ' + config.llmVoiceifyMaxEntries + ' 条）。'
       });
     } else if (llmMeta?.llmProcessed > 0) {
       warnings.push({
         type: 'llm_done',
-        message: 'AI 大模型已精修 ' + llmMeta.llmProcessed + ' 条质量待提升的条目。'
+        message: 'AI 大模型已逐条精修 ' + llmMeta.llmProcessed + ' 条。'
       });
     }
     if (!config.enableLLMEnhance) {

@@ -378,9 +378,9 @@
                     <div class="kv-field">
                         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                             <input type="checkbox" id="enableLLMEnhance" style="width:auto;" checked>
-                            AI 增强（大模型精修质量最差的条目，较慢）
+                            AI 增强（大模型逐条精修，较慢）
                         </label>
-                        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">内置深度口语化会先处理全部条目；勾选后额外调用大模型精修 HTML/长文/书面语条目（单次最多 500 条）</div>
+                        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">内置深度口语化会先处理全部条目；勾选后每条知识单独调用大模型精修（7700 条约需数小时，请保持页面打开）</div>
                     </div>
                     <div class="kv-field">
                         <label>上传文件</label>
@@ -494,7 +494,7 @@
     </footer>
 
     <script src="../script.js"></script>
-    <script src="knowledge-voice/kv-bundle.js?v=16" charset="UTF-8"></script>
+    <script src="knowledge-voice/kv-bundle.js?v=17" charset="UTF-8"></script>
     <script>
         function showLoadError(msg) {
             console.error(msg);
@@ -671,7 +671,8 @@
                 generateSimilarQuestions: true,
                 generateRegexSimilar: false,
                 enableLLMEnhance: document.getElementById('enableLLMEnhance').checked,
-                llmVoiceifyMaxEntries: 500
+                llmVoiceifyMaxEntries: 0,
+                llmRequestDelayMs: 400
             };
         }
 
@@ -706,7 +707,7 @@
                 ? '耗时（内置+大模型）'
                 : '耗时（内置深度口语化）';
 
-            const modeLabel = isLlm ? '内置深度口语化 + AI 大模型精修' : '内置深度口语化（未调大模型）';
+            const modeLabel = isLlm ? '内置深度口语化 + AI 大模型逐条精修' : '内置深度口语化（未调大模型）';
             const tbody = document.getElementById('previewBody');
             const warnEl = document.getElementById('importReminder');
             let warnHtml = `💡 处理方式：<strong>${modeLabel}</strong>。导入平台后请将问答设为「已上线」。`;
@@ -767,12 +768,13 @@
             const hasHtml = /<[^>]+>/.test(text);
             if (hasHtml && !config.enableLLMEnhance) {
                 const go = confirm(
-                    `检测到答案含 HTML 标签（约 ${approx} 条）。\n\n建议勾选「AI 增强」：内置会先深度口语化全部条目，大模型再精修质量最差的条目。\n\n未勾选也可继续，但不会调用大模型精修。\n\n继续？`
+                    `检测到答案含 HTML 标签（约 ${approx} 条）。\n\n建议勾选「AI 增强」：内置会先深度口语化全部条目，再逐条调用大模型精修。\n\n未勾选也可继续，但不会调用大模型精修。\n\n继续？`
                 );
                 if (!go) return;
-            } else if (config.enableLLMEnhance && approx > 50) {
+            } else if (config.enableLLMEnhance && approx > 0) {
+                const estMin = Math.max(1, Math.ceil(approx * 2 / 60));
                 const go = confirm(
-                    `约 ${approx} 条知识。\n\n处理流程：\n1. 内置深度口语化（全部条目，约十秒级）\n2. AI 大模型精修质量最差条目（最多 500 条，需数分钟）\n\n请保持页面打开，继续？`
+                    `约 ${approx} 条知识。\n\n处理流程：\n1. 内置深度口语化（全部条目，约十秒级）\n2. AI 大模型逐条精修（每条单独调用，约 ${estMin} 分钟以上）\n\n请保持页面打开，继续？`
                 );
                 if (!go) return;
             }

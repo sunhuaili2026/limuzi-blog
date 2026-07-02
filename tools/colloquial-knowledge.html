@@ -494,11 +494,7 @@
     </footer>
 
     <script src="../script.js"></script>
-    <script src="knowledge-voice/textProcessingRules.js?v=10"></script>
-    <script src="knowledge-voice/localKnowledgeEngine.js?v=10"></script>
-    <script src="knowledge-voice/knowledgeTransformPrompts.js?v=10"></script>
-    <script src="knowledge-voice/platformExport.js?v=10"></script>
-    <script src="knowledge-voice/knowledgeTransform.js?v=10"></script>
+    <script src="knowledge-voice/kv-bundle.js?v=11" charset="UTF-8"></script>
     <script>
         function showLoadError(msg) {
             console.error(msg);
@@ -517,10 +513,10 @@
             }
             if (!window.KVPrompts) missing.push('knowledgeTransformPrompts.js');
             if (!window.KVTransform || typeof window.KVTransform.parseUploadedFile !== 'function') {
-                missing.push('knowledgeTransform.js');
+                missing.push('kv-bundle.js');
             }
             if (missing.length) {
-                throw new Error('脚本模块未加载：' + missing.join('、') + '。请按 Ctrl+Shift+R 强制刷新；若仍失败，请检查 knowledge-voice 目录下 JS 是否可访问。');
+                throw new Error('脚本模块未加载：' + missing.join('、') + '。请按 Ctrl+Shift+R 强制刷新；若仍失败，请检查 knowledge-voice/kv-bundle.js 是否可访问。');
             }
         }
 

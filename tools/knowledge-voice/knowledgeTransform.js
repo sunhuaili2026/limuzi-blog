@@ -72,7 +72,7 @@
     if (!config.enableLLMEnhance || !getLocalEngine().needsLLMExtraction(text, localFindings)) {
       onProgress?.({
         phase: 'extracting',
-        message: `内置规则提取完成（${localFindings.length} 条）`
+        message: '内置规则提取完成（' + localFindings.length + ' 条）'
       });
       return localFindings;
     }
@@ -87,7 +87,7 @@
         phase: 'extracting',
         currentChunk: i + 1,
         totalChunks: chunks.length,
-        message: `AI 补充提取 (${i + 1}/${chunks.length})...`
+        message: 'AI 补充提取 (' + (i + 1) + '/' + chunks.length + ')...'
       });
       try {
         const prompt = buildExtractPrompt(config, chunks[i], i, chunks.length);
@@ -110,14 +110,14 @@
     if (!config.enableLLMEnhance) {
       onProgress?.({
         phase: 'voiceifying',
-        message: `内置深度口语化完成（${entries.length} 条）`
+        message: '内置深度口语化完成（' + entries.length + ' 条）'
       });
       return entries;
     }
 
     const ranked = getLocalEngine().rankForLLM(findings, entries);
     if (!ranked.length) {
-      onProgress?.({ phase: 'voiceifying', message: `内置规则完成（${entries.length} 条，质量已达标）` });
+      onProgress?.({ phase: 'voiceifying', message: '内置规则完成（' + entries.length + ' 条，质量已达标）' });
       return entries;
     }
 
@@ -127,7 +127,7 @@
 
     onProgress?.({
       phase: 'voiceifying',
-      message: `AI 大模型精修中 (${toProcess.length}/${ranked.length} 条，请稍候)...`
+      message: 'AI 大模型精修中 (' + toProcess.length + '/' + ranked.length + ' 条，请稍候)...'
     });
 
     const batchSize = 5;
@@ -143,7 +143,7 @@
 
       onProgress?.({
         phase: 'voiceifying',
-        message: `AI 大模型精修中 (${Math.min(i + batchSize, toProcess.length)}/${toProcess.length})...`
+        message: 'AI 大模型精修中 (' + Math.min(i + batchSize, toProcess.length) + '/' + toProcess.length + ')...'
       });
 
       try {
@@ -303,18 +303,18 @@
     if (llmMeta?.llmSkipped > 0) {
       warnings.push({
         type: 'llm_cap',
-        message: `AI 大模型已精修 ${llmMeta.llmProcessed} 条（优先处理质量最差的条目），另有 ${llmMeta.llmSkipped} 条仍用内置深度口语化（单次上限 ${config.llmVoiceifyMaxEntries || 500} 条）。`
+        message: 'AI 大模型已精修 ' + llmMeta.llmProcessed + ' 条（优先处理质量最差的条目），另有 ' + llmMeta.llmSkipped + ' 条仍用内置深度口语化（单次上限 ' + (config.llmVoiceifyMaxEntries || 500) + ' 条）。'
       });
     } else if (llmMeta?.llmProcessed > 0) {
       warnings.push({
         type: 'llm_done',
-        message: `AI 大模型已精修 ${llmMeta.llmProcessed} 条质量待提升的条目。`
+        message: 'AI 大模型已精修 ' + llmMeta.llmProcessed + ' 条质量待提升的条目。'
       });
     }
     if (!config.enableLLMEnhance) {
       warnings.push({
         type: 'builtin_only',
-        message: `本次使用内置深度口语化处理 ${entries.length} 条（未调用大模型，耗时约 ${Math.round((Date.now() - start) / 1000)} 秒）。勾选「AI 增强」可对质量最差的条目再精修。`
+        message: '本次使用内置深度口语化处理 ' + entries.length + ' 条（未调用大模型，耗时约 ' + Math.round((Date.now() - start) / 1000) + ' 秒）。勾选「AI 增强」可对质量最差的条目再精修。'
       });
     }
 
@@ -519,7 +519,7 @@
       0
     );
     return Array.from({ length: colCount }, (_, idx) => {
-      const name = String(headerRow[idx] ?? '').trim() || `列 ${idx + 1}`;
+      const name = String(headerRow[idx] ?? '').trim() || ('列 ' + (idx + 1));
       const sample = dataRows.slice(0, 5)
         .map(r => String((r || [])[idx] ?? '').trim())
         .find(Boolean) || '';
@@ -753,9 +753,9 @@
         fullAnswer = R.stripCategoryTagsFromAnswer(b.summary);
       }
       if (!fullAnswer || !isValidAnswer(fullAnswer)) return '';
-      let block = `【${b.cat || '通用'}】\n问：${b.q}\n答：${fullAnswer}`;
+      let block = '\u3010' + (b.cat || '通用') + '\u3011\n问：' + b.q + '\n答：' + fullAnswer;
       const tag = R.extractCategoryTag(b.summary);
-      if (tag) block += `\n分类：${tag}`;
+      if (tag) block += '\n分类：' + tag;
       return block;
     }).filter(Boolean).join('\n\n');
 
@@ -850,8 +850,8 @@
       }
       if (!fullAnswer) return '';
       const tag = R.extractCategoryTag(b.summary) || b.answers.find(a => R.isCategoryTagOnly(a));
-      let block = `【${b.cat || '通用'}】\n问：${b.q}\n答：${fullAnswer}`;
-      if (tag) block += `\n分类：${tag}`;
+      let block = '\u3010' + (b.cat || '通用') + '\u3011\n问：' + b.q + '\n答：' + fullAnswer;
+      if (tag) block += '\n分类：' + tag;
       return block;
     }).filter(Boolean).join('\n\n');
 

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCS 对话冷启动 - 李子木</title>
+    <link rel="stylesheet" href="../../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .sc-layout { max-width: 1100px; margin: 0 auto; }
+        .sc-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+        .sc-tab {
+            padding: 10px 20px; border-radius: 10px; border: 1px solid var(--border-color);
+            background: var(--bg-card); color: var(--text-secondary); text-decoration: none;
+            font-size: 14px; font-weight: 600;
+        }
+        .sc-tab.active { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); color: var(--accent-primary); }
+        .sc-grid { display: grid; grid-template-columns: 280px 1fr; gap: 24px; }
+        @media (max-width: 900px) { .sc-grid { grid-template-columns: 1fr; } }
+        .sc-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+        .sc-field { margin-bottom: 14px; }
+        .sc-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+        .sc-field input, .sc-field textarea, .sc-field select {
+            width: 100%; background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 10px; color: var(--text-primary); font-family: inherit; font-size: 13px;
+        }
+        .sc-field textarea { min-height: 70px; resize: vertical; }
+        .sc-btn {
+            display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px;
+            border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-secondary);
+            color: var(--text-primary); font-weight: 600; cursor: pointer; font-size: 14px;
+        }
+        .sc-btn.primary { background: var(--accent-gradient); border: none; width: 100%; margin-top: 12px; }
+        .sc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .sc-textarea { width: 100%; min-height: 200px; background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 14px; color: var(--text-primary); font-family: inherit; font-size: 14px; line-height: 1.7; }
+        .sc-section { margin-bottom: 20px; }
+        .sc-section h3 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .sc-item { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 10px; }
+        .sc-item h4 { font-size: 15px; margin-bottom: 8px; }
+        .sc-item p, .sc-item li { color: var(--text-secondary); line-height: 1.7; font-size: 14px; }
+        .sc-item ul { padding-left: 18px; margin: 0; }
+        .sc-progress { display: none; text-align: center; padding: 40px; color: var(--text-secondary); }
+        .sc-progress.active { display: block; }
+        .spinner { width: 36px; height: 36px; border: 3px solid var(--border-color); border-top-color: var(--accent-primary);
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .sc-result { display: none; }
+        .sc-result.active { display: block; }
+        .sc-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .sc-file { border: 2px dashed var(--border-color); border-radius: 10px; padding: 14px; text-align: center;
+            font-size: 13px; color: var(--text-secondary); cursor: pointer; margin-top: 8px; }
+        .sc-file input { display: none; }
+    </style>
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="nav-logo"><span class="logo-icon">◆</span><span class="logo-text">李子木</span></a>
+            <ul class="nav-menu">
+                <li><a href="/index.html" class="nav-link">首页</a></li>
+                <li><a href="/blog.html" class="nav-link">博客</a></li>
+                <li><a href="/tools.html" class="nav-link active">工具</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <section class="page-header" style="padding:120px 0 32px;">
+        <div class="container">
+            <span class="section-label">SmartCS</span>
+            <h1 class="page-title" style="font-size:36px;">🤖 对话冷启动分析</h1>
+            <p class="page-subtitle" style="color:var(--text-secondary);">上传客服对话记录，AI 自动挖掘业务场景、SOP 流程与 FAQ 知识库</p>
+        </div>
+    </section>
+
+    <section class="section" style="padding-top:0;">
+        <div class="container sc-layout">
+            <div class="sc-tabs">
+                <a href="/tools/smartcs-coldstart/" class="sc-tab active">对话冷启动 ✨</a>
+                <a href="/tools/colloquial-knowledge.html" class="sc-tab">知识库语音化</a>
+            </div>
+
+            <div class="sc-grid">
+                <aside class="sc-card">
+                    <h3 style="margin-bottom:16px;font-size:15px;">分析配置</h3>
+                    <div class="sc-field">
+                        <label for="companyName">品牌名称 *</label>
+                        <input type="text" id="companyName" placeholder="示例品牌">
+                    </div>
+                    <div class="sc-field">
+                        <label for="companyBrief">业务背景</label>
+                        <textarea id="companyBrief" placeholder="如：电商零售 / 智能出行"></textarea>
+                    </div>
+                    <label class="sc-file" for="fileInput">📁 上传 CSV / TXT 对话记录<input type="file" id="fileInput" accept=".csv,.txt"></label>
+                    <div id="fileName" style="font-size:12px;color:var(--text-secondary);margin-top:6px;"></div>
+                    <button class="sc-btn primary" id="analyzeBtn" onclick="startAnalyze()">开始分析</button>
+                </aside>
+
+                <main>
+                    <div class="sc-card">
+                        <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">粘贴客服对话记录</label>
+                        <textarea class="sc-textarea" id="chatInput" placeholder="支持粘贴通话转写、在线客服聊天记录...
+
+示例：
+客户：我的订单怎么还没发货？
+客服：您好，请提供订单号，我帮您查询。
+客户：12345678
+客服：查询到您的订单正在打包，预计明天发出。"></textarea>
+                    </div>
+
+                    <div class="sc-progress" id="loading">
+                        <div class="spinner"></div>
+                        <p>AI 正在分析对话，提取场景 / SOP / FAQ...</p>
+                    </div>
+
+                    <div class="sc-result" id="result">
+                        <div class="sc-toolbar">
+                            <button class="sc-btn" onclick="downloadJSON()">⬇️ 下载 JSON</button>
+                            <button class="sc-btn" onclick="copyFAQ()">📋 复制 FAQ</button>
+                            <a href="/tools/colloquial-knowledge.html" class="sc-btn">→ 下一步：知识库语音化</a>
+                        </div>
+                        <div class="sc-section" id="scenarioSection"></div>
+                        <div class="sc-section" id="sopSection"></div>
+                        <div class="sc-section" id="faqSection"></div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container"><div class="footer-bottom"><p>&copy; 2026 李子木</p></div></div></footer>
+    <script src="../../script.js"></script>
+    <script>
+        let lastResult = null;
+        const API_KEY = 'limuzi2025';
+
+        document.getElementById('fileInput').addEventListener('change', async e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('chatInput').value = await file.text();
+        });
+
+        async function callAPI(messages) {
+            const res = await fetch('/api/deepseek', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: API_KEY, model: 'deepseek-chat', messages, temperature: 0.5 })
+            });
+            if (!res.ok) throw new Error('API 调用失败');
+            const data = await res.json();
+            return data.choices[0].message.content;
+        }
+
+        function parseJSON(text) {
+            const m = text.match(/\{[\s\S]*\}/);
+            if (!m) throw new Error('无法解析结果');
+            return JSON.parse(m[0]);
+        }
+
+        function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+        function renderResult(data) {
+            lastResult = data;
+            document.getElementById('scenarioSection').innerHTML = `
+                <h3>📋 核心业务场景</h3>
+                ${(data.scenarios || []).map(s => `
+                    <div class="sc-item">
+                        <h4>${esc(s.name)}</h4>
+                        <p>${esc(s.description)}</p>
+                        ${s.frequency ? `<p style="margin-top:6px;font-size:12px;color:var(--accent-primary);">出现频率：${esc(s.frequency)}</p>` : ''}
+                    </div>`).join('')}`;
+
+            document.getElementById('sopSection').innerHTML = `
+                <h3>📝 SOP 服务流程</h3>
+                ${(data.sops || []).map(s => `
+                    <div class="sc-item">
+                        <h4>${esc(s.scenario)}</h4>
+                        <ol>${(s.steps || []).map(step => `<li>${esc(step)}</li>`).join('')}</ol>
+                    </div>`).join('')}`;
+
+            document.getElementById('faqSection').innerHTML = `
+                <h3>❓ FAQ 知识库</h3>
+                ${(data.faqs || []).map(f => `
+                    <div class="sc-item">
+                        <h4>Q：${esc(f.question)}</h4>
+                        <p>A：${esc(f.answer)}</p>
+                    </div>`).join('')}`;
+
+            document.getElementById('result').classList.add('active');
+        }
+
+        async function startAnalyze() {
+            const text = document.getElementById('chatInput').value.trim();
+            const companyName = document.getElementById('companyName').value.trim();
+            if (!text) { alert('请上传或粘贴对话记录'); return; }
+            if (!companyName) { alert('请填写品牌名称'); return; }
+
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = true;
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('result').classList.remove('active');
+
+            const brief = document.getElementById('companyBrief').value.trim();
+            try {
+                const content = await callAPI([
+                    { role: 'system', content: `你是 SmartCS 客服对话冷启动分析专家。从对话记录中挖掘业务场景、SOP 流程和 FAQ。
+企业：${companyName}，背景：${brief || '通用客服'}
+严格返回 JSON：
+{
+  "scenarios": [{"name":"场景名","description":"描述","frequency":"高/中/低"}],
+  "sops": [{"scenario":"场景","steps":["步骤1","步骤2"]}],
+  "faqs": [{"question":"用户问题","answer":"标准回答","category":"分类"}]
+}` },
+                    { role: 'user', content: `请分析以下客服对话：\n\n${text.slice(0, 30000)}` }
+                ]);
+                renderResult(parseJSON(content));
+            } catch (e) {
+                alert('分析失败：' + e.message);
+            } finally {
+                btn.disabled = false;
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+
+        function downloadJSON() {
+            if (!lastResult) return;
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' }));
+            a.download = 'smartcs-coldstart-result.json';
+            a.click();
+        }
+
+        function copyFAQ() {
+            if (!lastResult?.faqs) return;
+            const text = lastResult.faqs.map(f => `Q：${f.question}\nA：${f.answer}`).join('\n\n');
+            navigator.clipboard.writeText(text).then(() => alert('FAQ 已复制'));
+        }
+    </script>
+</body>
+</html>

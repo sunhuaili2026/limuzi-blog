@@ -272,11 +272,10 @@
       return await file.text();
     }
     if (name.endsWith('.csv')) {
-      const text = await file.text();
-      return text.split('\n').slice(1).map(line => {
-        const [category, question, answer] = line.split(',');
-        return `【${category || '通用'}】\n问：${question}\n答：${answer}`;
-      }).join('\n\n');
+      const text = (await file.text()).replace(/^\uFEFF/, '');
+      const rows = fileToRows(text);
+      if (isPlatformTemplateRows(rows)) return parsePlatformXlsxRows(rows);
+      return parseStructuredRows(rows);
     }
     if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
       if (typeof XLSX === 'undefined') throw new Error('SheetJS 未加载，无法解析 Excel');
@@ -284,9 +283,243 @@
       const wb = XLSX.read(data, { type: 'array' });
       const sheet = wb.Sheets['问答知识'] || wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      return parsePlatformXlsxRows(rows);
+      if (isPlatformTemplateRows(rows)) return parsePlatformXlsxRows(rows);
+      return parseStructuredRows(rows);
     }
     throw new Error('不支持的文件格式，请上传 .txt / .md / .csv / .xlsx');
+  }
+
+  function fileToRows(text) {
+    if (typeof XLSX !== 'undefined') {
+      const wb = XLSX.read(text, { type: 'string', raw: false });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    }
+    return parseCsvLines(text);
+  }
+
+  function joinRowCells(row) {
+    return (row || []).map(c => String(c ?? '')).join('|');
+  }
+
+  function isPlatformTemplateRows(rows) {
+    for (let i = 0; i < Math.min(rows.length, 20); i++) {
+      const line = joinRowCells(rows[i]);
+      if (line.includes('标准问') && (line.includes('答案') || line.includes('所属目录'))) return true;
+    }
+    return false;
+  }
+
+  const QUESTION_HEADERS = ['标准问', '问题', '问句', '用户问题', '提问', 'question', 'query', 'faq_question', 'std_question', 'title'];
+  const ANSWER_HEADERS = ['答案内容', '答案', '内容', '回复', '解答', 'answer', 'content', 'response', 'faq_answer', 'reply', 'answer_content', '简介内容'];
+  const CATEGORY_HEADERS = ['所属目录', '目录', '分类', 'category', 'path', '所属分类', '知识目录', '品类', '类目'];
+  const SKIP_HEADERS = ['id', '_id', 'uuid', 'question_id', 'answer_id', 'category_id', 'parent_id', 'workflow_id', 'created_at', 'updated_at', 'create_time', 'update_time', 'deleted', 'status', 'type'];
+
+  function isSnowflakeId(value) {
+    const s = String(value ?? '').trim();
+    return /^\d{15,20}$/.test(s);
+  }
+
+  function isValidQuestion(value) {
+    const s = String(value ?? '').trim();
+    if (!s || s.length < 2) return false;
+    if (/^(undefined|null|nan)$/i.test(s)) return false;
+    if (isSnowflakeId(s)) return false;
+    if (/^\d+$/.test(s) && s.length > 6) return false;
+    return true;
+  }
+
+  function isValidAnswer(value) {
+    const s = String(value ?? '').trim();
+    if (!s || s.length < 2) return false;
+    if (/^(undefined|null|nan)$/i.test(s)) return false;
+    if (isSnowflakeId(s)) return false;
+    if (/^\d+$/.test(s) && s.length > 6) return false;
+    return true;
+  }
+
+  function normalizeHeaderName(value) {
+    return String(value ?? '').trim().toLowerCase().replace(/^\*+/, '');
+  }
+
+  function detectColumnMapping(headerRow) {
+    const headers = (headerRow || []).map(normalizeHeaderName);
+    const mapping = { category: -1, question: -1, answer: -1, summary: -1 };
+    headers.forEach((h, idx) => {
+      if (!h || SKIP_HEADERS.some(skip => h === skip || h.endsWith('_' + skip) || h.includes('_id'))) return;
+      if (mapping.question < 0 && QUESTION_HEADERS.some(k => h === k.toLowerCase() || h.includes(k.toLowerCase()))) {
+        mapping.question = idx;
+      }
+      if (mapping.answer < 0 && ANSWER_HEADERS.some(k => h === k.toLowerCase() || h.includes(k.toLowerCase()))) {
+        mapping.answer = idx;
+      }
+      if (mapping.category < 0 && CATEGORY_HEADERS.some(k => h === k.toLowerCase() || h.includes(k.toLowerCase()))) {
+        mapping.category = idx;
+      }
+      if (mapping.summary < 0 && (h.includes('简介') || h === 'summary' || h === 'desc' || h === 'description')) {
+        mapping.summary = idx;
+      }
+    });
+    return mapping;
+  }
+
+  function columnStats(samples) {
+    const values = samples.map(v => String(v ?? '').trim()).filter(Boolean);
+    if (!values.length) return { count: 0, avgLen: 0, idRatio: 1, questionRatio: 0, answerRatio: 0 };
+    const avgLen = values.reduce((n, v) => n + v.length, 0) / values.length;
+    const idRatio = values.filter(isSnowflakeId).length / values.length;
+    const questionRatio = values.filter(v =>
+      isValidQuestion(v) && (/[？?]/.test(v) || /^(如何|怎么|什么|哪些|是否|能否|可以|多少|为什么|哪里|哪个|请问)/.test(v))
+    ).length / values.length;
+    const answerRatio = values.filter(v => isValidAnswer(v) && v.length >= 8).length / values.length;
+    return { count: values.length, avgLen, idRatio, questionRatio, answerRatio };
+  }
+
+  function inferColumnsByContent(rows) {
+    const sampleRows = rows.slice(0, Math.min(rows.length, 200));
+    const colCount = Math.max(...sampleRows.map(r => (r || []).length), 0);
+    const scores = [];
+
+    for (let col = 0; col < colCount; col++) {
+      const samples = sampleRows.map(r => (r || [])[col]).filter(v => String(v ?? '').trim());
+      const stats = columnStats(samples);
+      if (!stats.count) continue;
+      scores.push({
+        col,
+        stats,
+        questionScore: stats.questionRatio * 3 + (stats.avgLen > 4 && stats.avgLen < 120 ? 1 : 0) - stats.idRatio * 4,
+        answerScore: stats.answerRatio * 3 + Math.min(stats.avgLen / 40, 2) - stats.idRatio * 5,
+        categoryScore: (stats.avgLen > 1 && stats.avgLen < 30 ? 1.5 : 0) + (stats.idRatio < 0.2 ? 0.5 : -2) - stats.questionRatio
+      });
+    }
+
+    const byQuestion = [...scores].sort((a, b) => b.questionScore - a.questionScore);
+    const byAnswer = [...scores].sort((a, b) => b.answerScore - a.answerScore);
+    const byCategory = [...scores].sort((a, b) => b.categoryScore - a.categoryScore);
+
+    let question = byQuestion.find(s => s.questionScore > 0.5 && s.stats.idRatio < 0.3)?.col ?? -1;
+    let answer = byAnswer.find(s => s.answerScore > 0.8 && s.stats.idRatio < 0.2 && s.col !== question)?.col ?? -1;
+
+    if (question < 0) {
+      question = byQuestion.find(s => s.stats.idRatio < 0.2 && s.stats.avgLen >= 4 && s.stats.avgLen <= 150)?.col ?? -1;
+    }
+    if (answer < 0) {
+      answer = byAnswer.find(s => s.stats.idRatio < 0.15 && s.stats.avgLen >= 10 && s.col !== question)?.col ?? -1;
+    }
+
+    let category = byCategory.find(s => s.col !== question && s.col !== answer && s.stats.idRatio < 0.2)?.col ?? -1;
+    if (category < 0 && question > 0) category = 0;
+
+    return { category, question, answer, summary: -1 };
+  }
+
+  function findHeaderRowIndex(rows) {
+    for (let i = 0; i < Math.min(rows.length, 15); i++) {
+      const row = rows[i] || [];
+      const line = joinRowCells(row);
+      if (line.includes('标准问') || line.includes('question') || line.includes('问题')) return i;
+      const nonEmpty = row.filter(c => String(c ?? '').trim()).length;
+      if (nonEmpty >= 3) {
+        const mapping = detectColumnMapping(row);
+        if (mapping.question >= 0 && mapping.answer >= 0) return i;
+      }
+    }
+    return 0;
+  }
+
+  /** 通用表格/CSV：自动识别问题、答案、目录列，过滤 ID 与无效行 */
+  function parseStructuredRows(rows) {
+    const R = global.KVTextRules;
+    const cleanRows = (rows || []).filter(r => r && r.some(c => String(c ?? '').trim()));
+    if (!cleanRows.length) throw new Error('CSV/表格解析失败：文件为空');
+
+    const headerIdx = findHeaderRowIndex(cleanRows);
+    const headerRow = cleanRows[headerIdx] || [];
+    let mapping = detectColumnMapping(headerRow);
+    const dataRows = cleanRows.slice(headerIdx + 1);
+
+    if (mapping.question < 0 || mapping.answer < 0) {
+      mapping = inferColumnsByContent(dataRows.length ? dataRows : cleanRows);
+    }
+    if (mapping.question < 0 || mapping.answer < 0) {
+      throw new Error('无法识别 CSV 中的「问题」和「答案」列。请确认文件包含标准问/答案字段，或改用平台 xlsx 模板。');
+    }
+
+    const blocks = [];
+    dataRows.forEach(row => {
+      const cells = (row || []).map(c => String(c ?? '').trim());
+      if (!cells.some(Boolean)) return;
+
+      const question = cells[mapping.question] || '';
+      let answer = cells[mapping.answer] || '';
+      const category = mapping.category >= 0 ? (cells[mapping.category] || '') : '';
+      const summary = mapping.summary >= 0 ? (cells[mapping.summary] || '') : '';
+
+      if (!isValidQuestion(question)) return;
+      if (!isValidAnswer(answer)) {
+        if (isValidAnswer(summary)) answer = summary;
+        else return;
+      }
+      if (R.isCategoryTagOnly(answer)) return;
+
+      blocks.push({
+        cat: category || '通用',
+        q: question,
+        summary,
+        answers: [answer]
+      });
+    });
+
+    const text = blocks.map(b => {
+      let fullAnswer = b.answers.join('').trim();
+      fullAnswer = R.stripCategoryTagsFromAnswer(fullAnswer);
+      if (!fullAnswer && b.summary && !R.isCategoryTagOnly(b.summary) && b.summary.length > 8) {
+        fullAnswer = R.stripCategoryTagsFromAnswer(b.summary);
+      }
+      if (!fullAnswer || !isValidAnswer(fullAnswer)) return '';
+      let block = `【${b.cat || '通用'}】\n问：${b.q}\n答：${fullAnswer}`;
+      const tag = R.extractCategoryTag(b.summary);
+      if (tag) block += `\n分类：${tag}`;
+      return block;
+    }).filter(Boolean).join('\n\n');
+
+    if (!text) {
+      throw new Error('CSV 解析结果为空：未找到有效的问答内容。数据库导出请确认含「标准问/问题」与「答案/内容」列，且答案不是纯数字 ID。');
+    }
+    return text;
+  }
+
+  function parseCsvLines(text) {
+    const rows = [];
+    let row = [];
+    let cell = '';
+    let inQuotes = false;
+    const pushCell = () => { row.push(cell); cell = ''; };
+    const pushRow = () => {
+      if (row.length || cell) {
+        pushCell();
+        rows.push(row);
+        row = [];
+      }
+    };
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      const next = text[i + 1];
+      if (ch === '"') {
+        if (inQuotes && next === '"') { cell += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if ((ch === ',' && !inQuotes) || ch === '\t') {
+        pushCell();
+      } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+        if (ch === '\r' && next === '\n') i++;
+        pushRow();
+      } else {
+        cell += ch;
+      }
+    }
+    pushRow();
+    return rows.filter(r => r.some(c => String(c ?? '').trim()));
   }
 
   /** 解析平台 xlsx：合并多行答案，不把分类标签当答案 */
@@ -393,6 +626,7 @@
     transformKnowledgeToVoice,
     parseUploadedFile,
     parsePlatformXlsxRows,
+    parseStructuredRows,
     safeJsonParse
   };
 })(window);

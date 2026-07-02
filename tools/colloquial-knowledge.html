@@ -105,6 +105,35 @@
         .kv-file-zone:hover { border-color: var(--accent-primary); }
         .kv-file-zone input { display: none; }
 
+        .kv-mapping-panel {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-secondary);
+        }
+
+        .kv-mapping-panel.active { display: block; }
+
+        .kv-mapping-panel .kv-field { margin-bottom: 10px; }
+
+        .kv-mapping-preview {
+            margin-top: 10px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            max-height: 120px;
+            overflow: auto;
+        }
+
+        .kv-mapping-preview-item {
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .kv-mapping-preview-item:last-child { border-bottom: none; }
+
         .kv-btn {
             display: inline-flex;
             align-items: center;
@@ -339,6 +368,10 @@
                         <input type="number" id="categoryDepth" min="1" max="3" value="2">
                     </div>
                     <div class="kv-field">
+                        <label for="categoryPrefix">目录前缀</label>
+                        <input type="text" id="categoryPrefix" placeholder="如：语音客服/（可选）">
+                    </div>
+                    <div class="kv-field">
                         <label for="similarCount">相似问数量/条</label>
                         <input type="number" id="similarCount" min="1" max="15" value="8">
                     </div>
@@ -356,6 +389,31 @@
                             <input type="file" id="fileInput" accept=".txt,.md,.csv,.xlsx,.xls">
                         </label>
                         <div id="fileName" style="font-size:12px;color:var(--text-secondary);margin-top:6px;"></div>
+                        <div class="kv-mapping-panel" id="columnMappingPanel">
+                            <div style="font-size:12px;font-weight:600;margin-bottom:10px;">列映射 <span style="font-weight:400;color:var(--text-secondary)">各客户表结构不同，可手动调整</span></div>
+                            <div class="kv-field">
+                                <label for="colQuestion">问题列 *</label>
+                                <select id="colQuestion"></select>
+                            </div>
+                            <div class="kv-field">
+                                <label for="colAnswer">答案列 *</label>
+                                <select id="colAnswer"></select>
+                            </div>
+                            <div class="kv-field">
+                                <label for="colCategory1">目录列 1</label>
+                                <select id="colCategory1"></select>
+                            </div>
+                            <div class="kv-field">
+                                <label for="colCategory2">目录列 2</label>
+                                <select id="colCategory2"></select>
+                            </div>
+                            <div class="kv-field">
+                                <label for="colCategory3">目录列 3</label>
+                                <select id="colCategory3"></select>
+                            </div>
+                            <div id="mappingHint" style="font-size:11px;color:var(--text-secondary);"></div>
+                            <div class="kv-mapping-preview" id="mappingPreview"></div>
+                        </div>
                     </div>
                     <button class="kv-btn primary" id="startBtn" onclick="startTransform()">开始转换</button>
                 </aside>
@@ -444,26 +502,108 @@
         let lastResult = null;
         let uploadedText = '';
         let uploadedFile = null;
+        let fileAnalysis = null;
+
+        const MAPPING_SOURCE_LABEL = {
+            header: '按表头自动识别',
+            content: '按内容特征推断',
+            manual: '手动指定'
+        };
+
+        function isStructuredFile(name) {
+            return /\.(csv|xlsx|xls)$/i.test(name || '');
+        }
+
+        function getColumnMappingFromUI() {
+            if (!fileAnalysis || fileAnalysis.isPlatformTemplate) return null;
+            const question = +document.getElementById('colQuestion').value;
+            const answer = +document.getElementById('colAnswer').value;
+            const categories = ['colCategory1', 'colCategory2', 'colCategory3']
+                .map(id => +document.getElementById(id).value)
+                .filter(v => v >= 0);
+            if (question < 0 || answer < 0) return null;
+            return { question, answer, categories };
+        }
+
+        function buildColumnOptions(columns, selectedIdx) {
+            return columns.map(col => {
+                const label = `${col.name}${col.sample ? ' · ' + col.sample : ''}`;
+                const selected = col.index === selectedIdx ? ' selected' : '';
+                return `<option value="${col.index}"${selected}>${esc(label)}</option>`;
+            }).join('');
+        }
+
+        function renderColumnMappingPanel(analysis) {
+            const panel = document.getElementById('columnMappingPanel');
+            if (!analysis || analysis.isPlatformTemplate) {
+                panel.classList.remove('active');
+                return;
+            }
+
+            panel.classList.add('active');
+            const noneOption = '<option value="-1">不指定</option>';
+            const cols = analysis.columns || [];
+            const mapping = analysis.mapping || {};
+
+            document.getElementById('colQuestion').innerHTML = buildColumnOptions(cols, mapping.question);
+            document.getElementById('colAnswer').innerHTML = buildColumnOptions(cols, mapping.answer);
+            document.getElementById('colCategory1').innerHTML = noneOption + buildColumnOptions(cols, mapping.categories?.[0] ?? -1);
+            document.getElementById('colCategory2').innerHTML = noneOption + buildColumnOptions(cols, mapping.categories?.[1] ?? -1);
+            document.getElementById('colCategory3').innerHTML = noneOption + buildColumnOptions(cols, mapping.categories?.[2] ?? -1);
+
+            document.getElementById('mappingHint').textContent =
+                `${MAPPING_SOURCE_LABEL[analysis.mappingSource] || '自动识别'} · 有效 ${analysis.validRowCount}/${analysis.totalDataRows} 行`;
+
+            const preview = document.getElementById('mappingPreview');
+            preview.innerHTML = (analysis.previewRows || []).map(row =>
+                `<div class="kv-mapping-preview-item"><strong>目录</strong> ${esc(row.category)}<br><strong>问</strong> ${esc(row.question)}<br><strong>答</strong> ${esc((row.answer || '').slice(0, 60))}${(row.answer || '').length > 60 ? '...' : ''}</div>`
+            ).join('') || '暂无预览数据';
+        }
+
+        async function refreshFileParse() {
+            if (!uploadedFile) return;
+            const mapping = getColumnMappingFromUI();
+            const parseOptions = mapping ? { columnMapping: mapping } : {};
+            if (isStructuredFile(uploadedFile.name)) {
+                fileAnalysis = await KVTransform.analyzeUploadedFile(uploadedFile, parseOptions);
+                renderColumnMappingPanel(fileAnalysis);
+            }
+            uploadedText = await KVTransform.parseUploadedFile(uploadedFile, parseOptions);
+            const count = (uploadedText.match(/问[：:]/g) || []).length;
+            document.getElementById('fileName').textContent = `✅ ${uploadedFile.name}（已解析 ${count} 条）`;
+            if (uploadedText.length > 5000) {
+                document.getElementById('rawText').value = uploadedText.slice(0, 5000) + '\n...(预览已截断，转换将使用完整文件内容)';
+            } else {
+                document.getElementById('rawText').value = uploadedText;
+            }
+        }
+
+        ['colQuestion', 'colAnswer', 'colCategory1', 'colCategory2', 'colCategory3'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                refreshFileParse().catch(err => alert(err.message || '列映射更新失败'));
+            });
+        });
 
         document.getElementById('fileInput').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
             uploadedFile = file;
+            fileAnalysis = null;
             document.getElementById('fileName').textContent = '正在解析 ' + file.name + '...';
+            document.getElementById('columnMappingPanel').classList.remove('active');
             try {
-                uploadedText = await KVTransform.parseUploadedFile(file);
-                const count = (uploadedText.match(/问[：:]/g) || []).length;
-                document.getElementById('fileName').textContent = `✅ ${file.name}（已解析 ${count} 条）`;
-                if (uploadedText.length > 5000) {
-                    document.getElementById('rawText').value = uploadedText.slice(0, 5000) + '\n...(预览已截断，转换将使用完整文件内容)';
-                } else {
-                    document.getElementById('rawText').value = uploadedText;
+                if (isStructuredFile(file.name)) {
+                    fileAnalysis = await KVTransform.analyzeUploadedFile(file);
+                    renderColumnMappingPanel(fileAnalysis);
                 }
+                await refreshFileParse();
             } catch (err) {
                 uploadedText = '';
                 uploadedFile = null;
+                fileAnalysis = null;
                 document.getElementById('fileName').textContent = '❌ ' + file.name + ' 解析失败';
                 document.getElementById('rawText').value = '';
+                document.getElementById('columnMappingPanel').classList.remove('active');
                 alert(err.message || '文件解析失败');
             }
         });
@@ -471,7 +611,9 @@
         async function resolveInputText() {
             if (uploadedFile) {
                 try {
-                    uploadedText = await KVTransform.parseUploadedFile(uploadedFile);
+                    const mapping = getColumnMappingFromUI();
+                    const options = mapping ? { columnMapping: mapping } : {};
+                    uploadedText = await KVTransform.parseUploadedFile(uploadedFile, options);
                     return uploadedText;
                 } catch (err) {
                     throw new Error('文件解析失败：' + err.message);
@@ -493,6 +635,7 @@
                 maxAnswerLength: +document.getElementById('maxAnswerLength').value || 120,
                 maxAnswerTurns: 5,
                 categoryDepth: +document.getElementById('categoryDepth').value || 2,
+                categoryPrefix: document.getElementById('categoryPrefix').value.trim(),
                 similarQuestionsPerEntry: +document.getElementById('similarCount').value || 8,
                 generateSimilarQuestions: true,
                 generateRegexSimilar: false,

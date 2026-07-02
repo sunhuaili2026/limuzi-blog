@@ -266,7 +266,7 @@
     };
   }
 
-  async function parseUploadedFile(file) {
+  async function parseUploadedFile(file, options = {}) {
     const name = file.name.toLowerCase();
     if (name.endsWith('.txt') || name.endsWith('.md')) {
       return await file.text();
@@ -274,8 +274,8 @@
     if (name.endsWith('.csv')) {
       const text = (await file.text()).replace(/^\uFEFF/, '');
       const rows = fileToRows(text);
-      if (isPlatformTemplateRows(rows)) return parsePlatformXlsxRows(rows);
-      return parseStructuredRows(rows);
+      if (isPlatformTemplateRows(rows) && !options.columnMapping) return parsePlatformXlsxRows(rows);
+      return parseStructuredRows(rows, options);
     }
     if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
       if (typeof XLSX === 'undefined') throw new Error('SheetJS 未加载，无法解析 Excel');
@@ -283,8 +283,8 @@
       const wb = XLSX.read(data, { type: 'array' });
       const sheet = wb.Sheets['问答知识'] || wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      if (isPlatformTemplateRows(rows)) return parsePlatformXlsxRows(rows);
-      return parseStructuredRows(rows);
+      if (isPlatformTemplateRows(rows) && !options.columnMapping) return parsePlatformXlsxRows(rows);
+      return parseStructuredRows(rows, options);
     }
     throw new Error('不支持的文件格式，请上传 .txt / .md / .csv / .xlsx');
   }
@@ -310,10 +310,224 @@
     return false;
   }
 
-  const QUESTION_HEADERS = ['标准问', '问题', '问句', '用户问题', '提问', 'question', 'query', 'faq_question', 'std_question', 'title'];
-  const ANSWER_HEADERS = ['答案内容', '答案', '内容', '回复', '解答', 'answer', 'content', 'response', 'faq_answer', 'reply', 'answer_content', '简介内容'];
-  const CATEGORY_HEADERS = ['所属目录', '目录', '分类', 'category', 'path', '所属分类', '知识目录', '品类', '类目'];
-  const SKIP_HEADERS = ['id', '_id', 'uuid', 'question_id', 'answer_id', 'category_id', 'parent_id', 'workflow_id', 'created_at', 'updated_at', 'create_time', 'update_time', 'deleted', 'status', 'type'];
+  const QUESTION_HEADERS = ['标准问', '问题', '问句', '用户问题', '用户问', '提问', 'question', 'query', 'faq_question', 'std_question', 'ask', 'q_text', 'question_text', 'title', '标题'];
+  const ANSWER_HEADERS = ['答案内容', '答案', '内容', '回复', '解答', 'answer', 'content', 'response', 'faq_answer', 'reply', 'answer_content', '简介内容', 'a_text', 'answer_text', '话术', '播报'];
+  const CATEGORY_PATH_HEADERS = ['所属目录', '目录路径', '知识路径', 'category_path', 'full_path', 'catalog_path', 'path', '知识目录'];
+  const CATEGORY_PART_HEADERS = ['目录', '分类', 'category', '所属分类', '品类', '类目', '产品线', '业务线', '模块', '部门', 'category_name', 'sub_category', 'parent_category', 'product_line', 'catalog', 'folder', 'module', 'dept', '一级', '二级', '三级', 'level1', 'level2', 'level3'];
+  const SKIP_HEADERS = ['id', '_id', 'uuid', 'question_id', 'answer_id', 'category_id', 'parent_id', 'workflow_id', 'created_at', 'updated_at', 'create_time', 'update_time', 'deleted', 'status', 'type', 'sort', 'order', 'version'];
+
+  function shouldSkipHeader(h) {
+    if (!h) return true;
+    if (SKIP_HEADERS.some(skip => h === skip || h.endsWith('_' + skip))) return true;
+    return h.includes('_id') || h.endsWith('_id');
+  }
+
+  function headerMatches(h, keywords) {
+    return keywords.some(k => {
+      const key = k.toLowerCase();
+      return h === key || h.includes(key);
+    });
+  }
+
+  function isQuestionHeader(h) {
+    return !shouldSkipHeader(h) && headerMatches(h, QUESTION_HEADERS) && !headerMatches(h, ANSWER_HEADERS);
+  }
+
+  function isAnswerHeader(h) {
+    return !shouldSkipHeader(h) && headerMatches(h, ANSWER_HEADERS) && !headerMatches(h, QUESTION_HEADERS);
+  }
+
+  function isCategoryPathHeader(h) {
+    return !shouldSkipHeader(h) && headerMatches(h, CATEGORY_PATH_HEADERS);
+  }
+
+  function isCategoryPartHeader(h) {
+    if (shouldSkipHeader(h)) return false;
+    if (isQuestionHeader(h) || isAnswerHeader(h)) return false;
+    if (/简介|summary|desc|remark|note|comment|memo|标签|tag/.test(h)) return false;
+    return headerMatches(h, CATEGORY_PART_HEADERS) || /^(cat|dir|level|l)\d*$/.test(h);
+  }
+
+  function categoryLevelFromHeader(h) {
+    const m = h.match(/(一级|二级|三级|level\s*(\d)|l(\d)|目录\s*(\d))/);
+    if (!m) return 99;
+    if (m[1] === '一级') return 1;
+    if (m[1] === '二级') return 2;
+    if (m[1] === '三级') return 3;
+    return +(m[2] || m[3] || m[4] || 99);
+  }
+
+  function emptyMapping() {
+    return { categories: [], question: -1, answer: -1, summary: -1 };
+  }
+
+  function normalizeManualMapping(input) {
+    const mapping = emptyMapping();
+    if (!input) return mapping;
+    mapping.question = Number.isInteger(input.question) ? input.question : -1;
+    mapping.answer = Number.isInteger(input.answer) ? input.answer : -1;
+    mapping.summary = Number.isInteger(input.summary) ? input.summary : -1;
+    if (Array.isArray(input.categories)) {
+      mapping.categories = input.categories.filter(idx => Number.isInteger(idx) && idx >= 0);
+    } else if (Number.isInteger(input.category) && input.category >= 0) {
+      mapping.categories = [input.category];
+    }
+    return mapping;
+  }
+
+  function detectColumnMapping(headerRow) {
+    const headers = (headerRow || []).map((h, idx) => ({ idx, norm: normalizeHeaderName(h), raw: String(h ?? '').trim() }));
+    const mapping = emptyMapping();
+    const categoryParts = [];
+
+    headers.forEach(({ idx, norm }) => {
+      if (shouldSkipHeader(norm)) return;
+      if (mapping.question < 0 && isQuestionHeader(norm)) mapping.question = idx;
+      if (mapping.answer < 0 && isAnswerHeader(norm)) mapping.answer = idx;
+      if (isCategoryPathHeader(norm)) mapping.categories = [idx];
+      else if (isCategoryPartHeader(norm)) categoryParts.push({ idx, level: categoryLevelFromHeader(norm) });
+      if (mapping.summary < 0 && /简介|summary|desc|description|remark/.test(norm)) mapping.summary = idx;
+    });
+
+    if (!mapping.categories.length && categoryParts.length) {
+      mapping.categories = categoryParts
+        .sort((a, b) => a.level - b.level || a.idx - b.idx)
+        .map(item => item.idx);
+    }
+    return mapping;
+  }
+
+  function buildCategoryFromCells(cells, mapping, fallback = '通用') {
+    const indexes = (mapping.categories || []).filter(idx => idx >= 0);
+    const parts = indexes.map(idx => String(cells[idx] ?? '').trim()).filter(Boolean);
+    if (!parts.length) return fallback;
+    if (parts.length === 1 && /[/>\\|]/.test(parts[0])) {
+      const split = parts[0].split(/[/>\\|]/).map(s => s.trim()).filter(Boolean);
+      return split.join('/') || fallback;
+    }
+    return parts.join('/') || fallback;
+  }
+
+  function buildColumnList(headerRow, dataRows) {
+    const colCount = Math.max(
+      headerRow.length,
+      ...dataRows.slice(0, 30).map(r => (r || []).length),
+      0
+    );
+    return Array.from({ length: colCount }, (_, idx) => {
+      const name = String(headerRow[idx] ?? '').trim() || `列 ${idx + 1}`;
+      const sample = dataRows.slice(0, 5)
+        .map(r => String((r || [])[idx] ?? '').trim())
+        .find(Boolean) || '';
+      return { index: idx, name, sample: sample.slice(0, 48) };
+    });
+  }
+
+  function resolveStructuredContext(rows, options = {}) {
+    const cleanRows = (rows || []).filter(r => r && r.some(c => String(c ?? '').trim()));
+    if (!cleanRows.length) throw new Error('CSV/表格解析失败：文件为空');
+
+    const headerIdx = Number.isInteger(options.headerRowIndex) ? options.headerRowIndex : findHeaderRowIndex(cleanRows);
+    const headerRow = cleanRows[headerIdx] || [];
+    const dataRows = cleanRows.slice(headerIdx + 1);
+    let mapping;
+    let mappingSource = 'header';
+
+    if (options.columnMapping) {
+      mapping = normalizeManualMapping(options.columnMapping);
+      mappingSource = 'manual';
+    } else {
+      mapping = detectColumnMapping(headerRow);
+      if (mapping.question < 0 || mapping.answer < 0) {
+        mapping = inferColumnsByContent(dataRows.length ? dataRows : cleanRows);
+        mappingSource = 'content';
+      }
+    }
+
+    return { cleanRows, headerIdx, headerRow, dataRows, mapping, mappingSource };
+  }
+
+  function rowToStructuredItem(cells, mapping, R) {
+    const question = cells[mapping.question] || '';
+    let answer = cells[mapping.answer] || '';
+    const category = buildCategoryFromCells(cells, mapping);
+    const summary = mapping.summary >= 0 ? (cells[mapping.summary] || '') : '';
+
+    if (!isValidQuestion(question)) return null;
+    if (!isValidAnswer(answer)) {
+      if (isValidAnswer(summary)) answer = summary;
+      else return null;
+    }
+    if (R.isCategoryTagOnly(answer)) return null;
+
+    return { cat: category, q: question, summary, answers: [answer] };
+  }
+
+  function analyzeStructuredRows(rows, options = {}) {
+    const ctx = resolveStructuredContext(rows, options);
+    const R = global.KVTextRules;
+    const previewRows = [];
+    let validRowCount = 0;
+
+    ctx.dataRows.forEach(row => {
+      const cells = (row || []).map(c => String(c ?? '').trim());
+      if (!cells.some(Boolean)) return;
+      const item = rowToStructuredItem(cells, ctx.mapping, R);
+      if (!item) return;
+      validRowCount++;
+      if (previewRows.length < 5) {
+        previewRows.push({
+          question: item.q,
+          answer: item.answers[0],
+          category: item.cat
+        });
+      }
+    });
+
+    return {
+      headerRowIndex: ctx.headerIdx,
+      columns: buildColumnList(ctx.headerRow, ctx.dataRows),
+      mapping: ctx.mapping,
+      mappingSource: ctx.mappingSource,
+      previewRows,
+      validRowCount,
+      totalDataRows: ctx.dataRows.length,
+      isPlatformTemplate: isPlatformTemplateRows(ctx.cleanRows)
+    };
+  }
+
+  async function readFileToRows(file) {
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.csv')) {
+      const text = (await file.text()).replace(/^\uFEFF/, '');
+      return fileToRows(text);
+    }
+    if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+      if (typeof XLSX === 'undefined') throw new Error('SheetJS 未加载，无法解析 Excel');
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheet = wb.Sheets['问答知识'] || wb.Sheets[wb.SheetNames[0]];
+      return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    }
+    throw new Error('列映射分析仅支持 csv / xlsx 文件');
+  }
+
+  async function analyzeUploadedFile(file, options = {}) {
+    const rows = await readFileToRows(file);
+    if (isPlatformTemplateRows(rows)) {
+      return {
+        isPlatformTemplate: true,
+        columns: [],
+        mapping: null,
+        mappingSource: 'platform',
+        previewRows: [],
+        validRowCount: 0,
+        totalDataRows: rows.length,
+        headerRowIndex: findXlsxDataStartRow(rows)
+      };
+    }
+    return { ...analyzeStructuredRows(rows, options), isPlatformTemplate: false };
+  }
 
   function isSnowflakeId(value) {
     const s = String(value ?? '').trim();
@@ -340,27 +554,6 @@
 
   function normalizeHeaderName(value) {
     return String(value ?? '').trim().toLowerCase().replace(/^\*+/, '');
-  }
-
-  function detectColumnMapping(headerRow) {
-    const headers = (headerRow || []).map(normalizeHeaderName);
-    const mapping = { category: -1, question: -1, answer: -1, summary: -1 };
-    headers.forEach((h, idx) => {
-      if (!h || SKIP_HEADERS.some(skip => h === skip || h.endsWith('_' + skip) || h.includes('_id'))) return;
-      if (mapping.question < 0 && QUESTION_HEADERS.some(k => h === k.toLowerCase() || h.includes(k.toLowerCase()))) {
-        mapping.question = idx;
-      }
-      if (mapping.answer < 0 && ANSWER_HEADERS.some(k => h === k.toLowerCase() || h.includes(k.toLowerCase()))) {
-        mapping.answer = idx;
-      }
-      if (mapping.category < 0 && CATEGORY_HEADERS.some(k => h === k.toLowerCase() || h.includes(k.toLowerCase()))) {
-        mapping.category = idx;
-      }
-      if (mapping.summary < 0 && (h.includes('简介') || h === 'summary' || h === 'desc' || h === 'description')) {
-        mapping.summary = idx;
-      }
-    });
-    return mapping;
   }
 
   function columnStats(samples) {
@@ -407,10 +600,13 @@
       answer = byAnswer.find(s => s.stats.idRatio < 0.15 && s.stats.avgLen >= 10 && s.col !== question)?.col ?? -1;
     }
 
-    let category = byCategory.find(s => s.col !== question && s.col !== answer && s.stats.idRatio < 0.2)?.col ?? -1;
-    if (category < 0 && question > 0) category = 0;
+    const categoryCols = byCategory
+      .filter(s => s.col !== question && s.col !== answer && s.stats.idRatio < 0.2 && s.categoryScore > 0)
+      .slice(0, 3)
+      .map(s => s.col)
+      .sort((a, b) => a - b);
 
-    return { category, question, answer, summary: -1 };
+    return { categories: categoryCols, question, answer, summary: -1 };
   }
 
   function findHeaderRowIndex(rows) {
@@ -428,46 +624,20 @@
   }
 
   /** 通用表格/CSV：自动识别问题、答案、目录列，过滤 ID 与无效行 */
-  function parseStructuredRows(rows) {
+  function parseStructuredRows(rows, options = {}) {
     const R = global.KVTextRules;
-    const cleanRows = (rows || []).filter(r => r && r.some(c => String(c ?? '').trim()));
-    if (!cleanRows.length) throw new Error('CSV/表格解析失败：文件为空');
+    const ctx = resolveStructuredContext(rows, options);
 
-    const headerIdx = findHeaderRowIndex(cleanRows);
-    const headerRow = cleanRows[headerIdx] || [];
-    let mapping = detectColumnMapping(headerRow);
-    const dataRows = cleanRows.slice(headerIdx + 1);
-
-    if (mapping.question < 0 || mapping.answer < 0) {
-      mapping = inferColumnsByContent(dataRows.length ? dataRows : cleanRows);
-    }
-    if (mapping.question < 0 || mapping.answer < 0) {
-      throw new Error('无法识别 CSV 中的「问题」和「答案」列。请确认文件包含标准问/答案字段，或改用平台 xlsx 模板。');
+    if (ctx.mapping.question < 0 || ctx.mapping.answer < 0) {
+      throw new Error('无法识别表格中的「问题」和「答案」列。请在左侧手动指定列映射，或确认文件含标准问/答案字段。');
     }
 
     const blocks = [];
-    dataRows.forEach(row => {
+    ctx.dataRows.forEach(row => {
       const cells = (row || []).map(c => String(c ?? '').trim());
       if (!cells.some(Boolean)) return;
-
-      const question = cells[mapping.question] || '';
-      let answer = cells[mapping.answer] || '';
-      const category = mapping.category >= 0 ? (cells[mapping.category] || '') : '';
-      const summary = mapping.summary >= 0 ? (cells[mapping.summary] || '') : '';
-
-      if (!isValidQuestion(question)) return;
-      if (!isValidAnswer(answer)) {
-        if (isValidAnswer(summary)) answer = summary;
-        else return;
-      }
-      if (R.isCategoryTagOnly(answer)) return;
-
-      blocks.push({
-        cat: category || '通用',
-        q: question,
-        summary,
-        answers: [answer]
-      });
+      const item = rowToStructuredItem(cells, ctx.mapping, R);
+      if (item) blocks.push(item);
     });
 
     const text = blocks.map(b => {
@@ -484,7 +654,7 @@
     }).filter(Boolean).join('\n\n');
 
     if (!text) {
-      throw new Error('CSV 解析结果为空：未找到有效的问答内容。数据库导出请确认含「标准问/问题」与「答案/内容」列，且答案不是纯数字 ID。');
+      throw new Error('表格解析结果为空：未找到有效的问答内容。请检查列映射，或确认答案列不是纯数字 ID。');
     }
     return text;
   }
@@ -625,8 +795,10 @@
   global.KVTransform = {
     transformKnowledgeToVoice,
     parseUploadedFile,
+    analyzeUploadedFile,
     parsePlatformXlsxRows,
     parseStructuredRows,
+    analyzeStructuredRows,
     safeJsonParse
   };
 })(window);

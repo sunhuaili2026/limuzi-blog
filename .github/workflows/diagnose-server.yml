@@ -1,0 +1,28 @@
+name: Diagnose Server
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check server tools directory and backups
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            echo "=== /var/www/html/tools ==="
+            sudo ls -la /var/www/html/tools/ 2>/dev/null || echo "no tools dir"
+            echo "=== smartcs-coldstart ==="
+            sudo ls -la /var/www/html/tools/smartcs-coldstart/ 2>/dev/null || echo "MISSING"
+            echo "=== backups ==="
+            sudo ls -lt /var/www/backup/ 2>/dev/null | head -10 || echo "no backups"
+            for b in $(sudo ls -t /var/www/backup/ 2>/dev/null | head -5); do
+              echo "--- backup $b tools ---"
+              sudo ls -la /var/www/backup/$b/tools/ 2>/dev/null || echo "no tools"
+            done

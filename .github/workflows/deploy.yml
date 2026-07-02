@@ -50,4 +50,25 @@ jobs:
             sudo git fetch origin main
             sudo git reset --hard origin/main
             echo "Deployed: $(git log -1 --oneline)"
+            # 恢复 git 仓库外的工具（如 SmartCS），避免自动部署覆盖
+            if [ ! -d "$WEB_ROOT/tools/smartcs-coldstart" ] || [ -z "$(sudo ls -A "$WEB_ROOT/tools/smartcs-coldstart" 2>/dev/null)" ]; then
+              echo "SmartCS missing, searching backups..."
+              for b in $(sudo ls -t /var/www/backup/ 2>/dev/null); do
+                if [ -d "/var/www/backup/$b/tools/smartcs-coldstart" ]; then
+                  sudo mkdir -p "$WEB_ROOT/tools"
+                  sudo cp -r "/var/www/backup/$b/tools/smartcs-coldstart" "$WEB_ROOT/tools/"
+                  echo "Restored smartcs-coldstart from backup $b"
+                  break
+                fi
+                if [ -d "/var/www/backup/$b/tools/smartcs-v3" ]; then
+                  sudo mkdir -p "$WEB_ROOT/tools/smartcs-coldstart"
+                  sudo cp -r "/var/www/backup/$b/tools/smartcs-v3/"* "$WEB_ROOT/tools/smartcs-coldstart/" 2>/dev/null || \
+                  sudo cp -r "/var/www/backup/$b/tools/smartcs-v3" "$WEB_ROOT/tools/smartcs-coldstart"
+                  echo "Restored smartcs-v3 as smartcs-coldstart from backup $b"
+                  break
+                fi
+              done
+            fi
+            echo "Tools on server:"
+            sudo ls -la "$WEB_ROOT/tools/" 2>/dev/null || true
             cd /var/www/backup/ && sudo ls -t | tail -n +6 | xargs -r sudo rm -rf || true

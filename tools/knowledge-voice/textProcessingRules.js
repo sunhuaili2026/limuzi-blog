@@ -10,7 +10,12 @@
 
   function stripHtml(text) {
     if (!text) return '';
-    let result = text.replace(/<\/?(h[1-6]|p|div|br|li|tr|td|th)[^>]*>/gi, '\n');
+    let result = String(text);
+    // 块级/列表标签换行，保留结构
+    result = result.replace(/<\/?(h[1-6]|p|div|section|article|tr)[^>]*>/gi, '\n');
+    result = result.replace(/<br\s*\/?>/gi, '\n');
+    result = result.replace(/<\/li>\s*/gi, '\n');
+    result = result.replace(/<li[^>]*>/gi, '• ');
     result = result.replace(/<[^>]+>/g, '');
     Object.entries(HTML_ENTITIES).forEach(([entity, ch]) => {
       result = result.replaceAll(entity, ch);
@@ -48,21 +53,30 @@
     if (!text) return '';
     let result = stripHtml(text);
 
+    // 去掉 pipe 品类后缀（标准问/标题里常见）
+    result = result.replace(/\s*\|\s*[^|\n]{1,30}$/gm, '');
+
+    // 大类标题：1 产品类 / 2 服务类
+    result = result.replace(/(?:^|\n|\s)\d{1,2}\s*[\u4e00-\u9fa5A-Za-z]{2,8}类\s*/g, ' ');
+
     // 无编号的章节小标题
     result = result.replace(
-      /(?:^|\n)\s*(?:活动背景|活动规则|活动详情|活动内容|参与方式|适用条件|注意事项|温馨提示|申请条件|办理流程|所需材料)[：:：]?\s*/g,
+      /(?:^|\n|\s)(?:活动背景|活动规则|活动详情|活动内容|参与方式|适用条件|注意事项|温馨提示|申请条件|办理流程|所需材料|监督范围|奖励说明|投诉渠道)[：:：]?\s*/g,
       ' '
     );
 
-    // 编号列表 → 第一，第二，（含 "1. 活动背景" 这类）
+    // 括号编号 (1) （1） → 第一，
+    result = result.replace(/[（(]\s*(\d{1,2})\s*[）)]\s*/g, (_, num) => ` ${ordinalLabel(+num)}，`);
+
+    // 编号列表 → 第一，第二，
     result = result.replace(/(?:^|\n|\s)(\d{1,2})[.．、)）]\s*(?:活动背景|活动规则|活动详情|活动内容|参与方式|适用条件|注意事项|温馨提示|申请条件|办理流程|所需材料)?[：:：]?\s*/g, (_, num) => {
       return ` ${ordinalLabel(+num)}，`;
     });
 
     // 无序列表符
-    result = result.replace(/[•·●○◆▪-]\s+/g, '，');
+    result = result.replace(/[•·●○◆▪\-—]\s+/g, '，');
 
-    // 合并空白，去掉空行
+    // 合并空白
     result = result.replace(/\r/g, '')
       .replace(/\n+/g, ' ')
       .replace(/\s{2,}/g, ' ')
@@ -71,22 +85,86 @@
     return result;
   }
 
+  /** 去掉法务套话、冗余声明 */
+  function stripBoilerplate(text) {
+    return (text || '')
+      .replace(/活动最终解释权归[^。；]*[。；]?/g, '')
+      .replace(/最终解释权归[^。；]*[。；]?/g, '')
+      .replace(/详情以[^。；]*(?:为准|为准。)[。；]?/g, '')
+      .replace(/具体以[^。；]*(?:为准|为准。)[。；]?/g, '')
+      .replace(/如有疑问[^。；]*[。；]?/g, '')
+      .replace(/更多详情[^。；]*[。；]?/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  /** 长文档压缩为可播报要点（内置规则，非 LLM） */
+  function condenseForVoice(text, maxLen) {
+    let result = stripBoilerplate(text);
+    const ordinals = (result.match(/第[一二三四五六七八九十\d]+，/g) || []).length;
+    if (result.length <= maxLen && ordinals <= 1) return result;
+
+    const clauses = result
+      .split(/(?=第[一二三四五六七八九十\d]+，)|[。；]/)
+      .map(s => s.trim().replace(/^第[一二三四五六七八九十\d]+，/, ''))
+      .filter(s => s.length > 6 && !/^[\d\s类]+$/.test(s));
+
+    const priority = /参与|获得|奖励|积分|体验|监督|反馈|申请|办理|支持|可以|能够|享受|领取|兑换|保修|退换|活动|到店|鼓励/;
+    const scoreClause = (s) => {
+      let sc = 0;
+      if (/鼓励|参与|监督|活动/.test(s)) sc += 10;
+      if (/获得|奖励|积分|体验/.test(s)) sc += 6;
+      if (/可以|能够|每人限|到店/.test(s)) sc += 4;
+      if (/反馈/.test(s) && !/参与|监督|鼓励/.test(s)) sc += 1;
+      if (priority.test(s)) sc += 2;
+      return sc;
+    };
+    const seen = new Set();
+    const ranked = [...clauses].sort((a, b) => scoreClause(b) - scoreClause(a) || b.length - a.length);
+
+    const picked = [];
+    let total = 0;
+    for (const s of ranked) {
+      const key = s.slice(0, 12);
+      if (seen.has(key)) continue;
+      if (picked.length >= 2) break;
+      if (total + s.length + 1 > maxLen) continue;
+      seen.add(key);
+      picked.push(s);
+      total += s.length + 1;
+    }
+
+    if (picked.length) return picked.join('，') + '。';
+    return truncateAtSentence(result, maxLen);
+  }
+
+  /** 硬控单轮字数（含「您好，」前缀预留） */
+  function enforceTurnLength(turn, maxLen, reservePrefix) {
+    const limit = Math.max(20, maxLen - (reservePrefix || 0));
+    if (!turn || turn.length <= limit) return turn;
+    return truncateAtSentence(turn, limit);
+  }
+
   /** 书面语 → 播报口语（Layer1 确定性改写） */
   function oralizeFormalPhrases(text) {
     return (text || '')
-      .replace(/该商品/g, '这款产品')
-      .replace(/上述/g, '')
-      .replace(/如下/g, '')
+      .replace(/该商品|该产品/g, '这款产品')
+      .replace(/上述|如下所述|具体如下/g, '')
       .replace(/详见/g, '您可以了解')
       .replace(/点击/g, '联系')
       .replace(/查看/g, '了解')
       .replace(/扫码/g, '操作')
       .replace(/登录/g, '进入')
-      .replace(/官方网站/g, '官网')
+      .replace(/官方网站|官方平台/g, '官网')
+      .replace(/授权代理商\/门店/g, '授权门店')
       .replace(/温馨提示[：:，,]?/g, '')
       .replace(/请注意[：:，,]?/g, '')
       .replace(/也就是说[，,]?/g, '')
-      .replace(/[（(]详见[^）)]*[）)]/g, '');
+      .replace(/尊敬的用户[，,]?/g, '')
+      .replace(/亲爱的用户[，,]?/g, '')
+      .replace(/[（(]详见[^）)]*[）)]/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
   }
 
   const DIGITS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
@@ -210,9 +288,11 @@
     answer = normalizePunctuation(answer);
     answer = stripCategoryTagsFromAnswer(answer);
     answer = oralizeFormalPhrases(answer);
+    answer = stripBoilerplate(answer);
     answer = oralizeNumbers(answer);
 
     let standardQuestion = normalizePunctuation(entry.question || entry.standardQuestion || '');
+    standardQuestion = standardQuestion.replace(/\s*\|\s*[^|]{1,30}$/g, '').trim();
     standardQuestion = oralizeFormalPhrases(standardQuestion).slice(0, 200);
     const intentTag = entry.intentTag || extractCategoryTag(entry.answer || entry.summary || '');
 
@@ -221,7 +301,15 @@
       if (fallback && !isCategoryTagOnly(fallback)) answer = fallback;
     }
 
-    const answerTurns = splitAnswerTurns(answer, maxLen, maxTurns);
+    let answerTurns = splitAnswerTurns(answer, maxLen, maxTurns);
+    answerTurns = answerTurns.map(turn => {
+      let t = stripBoilerplate(turn);
+      const ordinals = (t.match(/第[一二三四五六七八九十\d]+，/g) || []).length;
+      if (t.length > maxLen || ordinals > 1) {
+        t = condenseForVoice(t, maxLen);
+      }
+      return t;
+    }).filter(t => t && t.length > 2);
     const needsHuman = detectSensitive(standardQuestion + answer);
 
     let summary = entry.summary || '';
@@ -268,6 +356,9 @@
     oralizeNumbers,
     oralizeDocumentStructure,
     oralizeFormalPhrases,
+    stripBoilerplate,
+    condenseForVoice,
+    enforceTurnLength,
     splitMultiEntity,
     truncateAtSentence,
     splitAnswerTurns,

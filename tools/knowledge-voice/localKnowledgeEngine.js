@@ -115,7 +115,7 @@
       intentTag,
       keywords: extractKeywords(q + a),
       sourceExcerpt: a.slice(0, 200),
-      isComplex: R.detectSensitive(q + a)
+      isComplex: R.detectSensitive(q + a) || a.length > 600 || /<[^>]+>/.test(answer)
     });
   }
 
@@ -164,7 +164,7 @@
         sourceExcerpt: f.sourceExcerpt
       }, config);
 
-      entry.answerTurns = entry.answerTurns.map((turn, i) => oralizeAnswerTone(turn, i === 0));
+      entry.answerTurns = entry.answerTurns.map((turn, i) => oralizeAnswerTone(turn, i === 0, config));
       if (!entry.standardQuestion.match(/[？?]$/)) {
         entry.standardQuestion = ensureQuestion(entry.standardQuestion);
       }
@@ -172,15 +172,18 @@
     });
   }
 
-  function oralizeAnswerTone(answer, isFirstTurn) {
+  function oralizeAnswerTone(answer, isFirstTurn, config) {
+    const maxLen = config?.maxAnswerLength || 120;
     let a = (answer || '').trim();
     if (!a) return a;
     a = R.oralizeFormalPhrases(a);
-    if (isFirstTurn && !/^(您好|你好)/.test(a) && a.length > 8) {
+    const prefixReserve = isFirstTurn && !/^(您好|你好)/.test(a) && a.length > 8 ? 3 : 0;
+    a = R.enforceTurnLength(a, maxLen, prefixReserve);
+    if (isFirstTurn && prefixReserve) {
       a = '您好，' + a.replace(/^[，,]/, '');
     }
     if (!/[。！？?]$/.test(a)) a += '。';
-    return a;
+    return R.enforceTurnLength(a, maxLen, 0);
   }
 
   /** Phase 3 本地去重审核 */

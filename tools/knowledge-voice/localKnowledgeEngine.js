@@ -195,8 +195,8 @@
     if ((finding.rawAnswerLength || 0) > 300) score += 15;
     if (finding.hasHtml) score += 10;
     if (turn.length > (config?.maxAnswerLength || 120)) score += 20;
-    if (/感谢|如下|上述|详见|一、|（一）|（二）|功能介绍/.test(turn)) score += 20;
-    if (R.hasDocumentStructure?.(turn)) score += 25;
+    if (/感谢|如下|上述|详见|一、|（一）|（二）|功能介绍|pageKey|https?:|\/#\//.test(turn)) score += 20;
+    if (R.hasDocumentStructure?.(turn) || R.hasTechnicalNoise?.(turn)) score += 25;
     return score;
   }
 

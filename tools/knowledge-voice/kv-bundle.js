@@ -1,4 +1,4 @@
-/* KV Bundle - 2026-07-02T07:02:56Z */
+/* KV Bundle - 2026-07-02T07:07:42Z */
 /* --- textProcessingRules.js --- */
 /** Layer 1 规则引擎 — 确定性文字处理 */
 (function (global) {
@@ -18,11 +18,55 @@
     result = result.replace(/<br\s*\/?>/gi, '\n');
     result = result.replace(/<\/li>\s*/gi, '\n');
     result = result.replace(/<li[^>]*>/gi, '• ');
+    result = result.replace(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => {
+      const lbl = String(label).replace(/<[^>]+>/g, '').trim();
+      if (lbl && lbl.length <= 20 && /[\u4e00-\u9fa5]/.test(lbl)) return lbl;
+      return '';
+    });
     result = result.replace(/<[^>]+>/g, '');
     Object.entries(HTML_ENTITIES).forEach(([entity, ch]) => {
       result = result.replaceAll(entity, ch);
     });
     return result.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+  }
+
+  /** 去掉链接、pageKey、路径参数等无法播报的内容 */
+  function stripUrlsAndTechnical(text) {
+    let t = String(text ?? '');
+    t = t.replace(/https?:\/\/[^\s，,。；<>\"']+/gi, ' ');
+    t = t.replace(/ftp:\/\/[^\s，,。；]+/gi, ' ');
+    t = t.replace(/www\.[^\s，,。；]+/gi, ' ');
+    t = t.replace(/(?:[a-z0-9-]+\.)+(?:com|cn|net|org|io|app)\/[^\s，,。；]*/gi, ' ');
+    t = t.replace(/\b[a-z]{2,10}\/#\/[^\s，,。；]+/gi, ' ');
+    t = t.replace(/\/(?:view|page|share|link|detail)[^\s，,。；]*/gi, ' ');
+    t = t.replace(/(?:pageKey|page_key|shareKey|objectKey|token|language|utm_[a-z]+)=[A-Za-z0-9_-]+/gi, ' ');
+    t = t.replace(/[?&][a-zA-Z_]+=[A-Za-z0-9_-]+/g, ' ');
+    t = t.replace(/\b[a-f0-9]{20,}\b/gi, ' ');
+    t = t.replace(/[\w.-]+\@[\w.-]+\.\w+/g, ' ');
+    return t.replace(/\s{2,}/g, ' ').replace(/^[，,.\s:：]+/, '').trim();
+  }
+
+  /** #话题 → 口语「xxx话题」 */
+  function oralizeHashtags(text) {
+    return String(text ?? '')
+      .replace(/#([\u4e00-\u9fa5A-Za-z0-9_]+)(?:\s*话题)?/g, '「$1」话题')
+      .replace(/(?:务必带上|带上)\s*「([^」]+)」话题/g, '记得带上$1这个话题')
+      .replace(/话题\s*话题/g, '话题');
+  }
+
+  /** 去掉文档式字段标签：奖励发放：、活动规则： */
+  function stripDocFieldLabels(text) {
+    return String(text ?? '')
+      .replace(/(?:奖励发放|活动时间|活动规则|参与方式|注意事项|活动说明|内容简介|活动详情|领取方式|兑换方式)[：:]\s*/g, '')
+      .replace(/^\s*[：:]\s*/g, '')
+      .trim();
+  }
+
+  function hasTechnicalNoise(text) {
+    const s = String(text ?? '');
+    return /https?:|www\.|\.com|\.cn\/|pageKey=|\/#\//.test(s)
+      || /#[A-Za-z0-9_\u4e00-\u9fa5]{2,}/.test(s)
+      || /\b[a-z]{2,8}\/#\//.test(s);
   }
 
   function normalizePunctuation(text) {
@@ -54,6 +98,7 @@
   function oralizeDocumentStructure(text) {
     if (!text) return '';
     let result = stripHtml(text);
+    result = stripUrlsAndTechnical(result);
 
     // 去掉 pipe 品类后缀（标准问/标题里常见）
     result = result.replace(/\s*\|\s*[^|\n]{1,30}$/gm, '');
@@ -267,13 +312,17 @@
   /** 最终润色：一条答案只讲一件事，像客服在电话里说 */
   function polishVoiceAnswer(text, question, maxLen) {
     let t = pickSectionForQuestion(text, question);
+    t = stripUrlsAndTechnical(t);
     t = stripSectionHeaders(t);
+    t = stripDocFieldLabels(t);
     t = stripFormalOpenings(stripBoilerplate(t));
+    t = oralizeHashtags(t);
     t = oralizeAppNavigation(t);
     t = oralizeFormalPhrases(t);
     t = compressAppSteps(t, maxLen);
     t = t.replace(/功能介绍\s*/g, '');
-    t = t.replace(/，{2,}/g, '，').replace(/^[，,]\s*/, '');
+    t = t.replace(/，{2,}/g, '，').replace(/^[，,.\s:：]+/, '');
+    t = stripUrlsAndTechnical(t);
     return enforceTurnLength(t, maxLen, 0);
   }
 
@@ -291,7 +340,7 @@
     let score = 0;
     const s = clause.trim();
     if (s.length < 6 || s.length > 200) score -= 3;
-    if (/感谢|尊敬|亲爱的|如下|上述|详见|敬请|抱歉给您/.test(s)) score -= 8;
+    if (/感谢|尊敬|亲爱的|如下|上述|详见|敬请|抱歉给您|pageKey|https?:|\/#\//.test(s)) score -= 12;
     if (/可以|能够|支持|享受|获得|领取|兑换|参与|办理|申请|保修|退换|到店|鼓励|监督|反馈/.test(s)) score += 6;
     if (/一般|通常|建议|需要|必须|仅限|每人|每次|有效期|截止/.test(s)) score += 3;
     questionKeywords.forEach(kw => {
@@ -641,7 +690,8 @@
     const question = entry.question || entry.standardQuestion || '';
     const rawAnswer = entry.answer || '';
     const needsDeep = entry.hasHtml || plainTextLength(rawAnswer) > maxLen * 1.2
-      || isOverlyFormal(stripHtml(rawAnswer)) || hasDocumentStructure(stripHtml(rawAnswer));
+      || isOverlyFormal(stripHtml(rawAnswer)) || hasDocumentStructure(stripHtml(rawAnswer))
+      || hasTechnicalNoise(stripHtml(rawAnswer));
 
     let answer;
     if (needsDeep) {
@@ -718,6 +768,10 @@
 
   global.KVTextRules = {
     stripHtml,
+    stripUrlsAndTechnical,
+    oralizeHashtags,
+    stripDocFieldLabels,
+    hasTechnicalNoise,
     normalizePunctuation,
     oralizeNumbers,
     oralizeDocumentStructure,
@@ -956,8 +1010,8 @@
     if ((finding.rawAnswerLength || 0) > 300) score += 15;
     if (finding.hasHtml) score += 10;
     if (turn.length > (config?.maxAnswerLength || 120)) score += 20;
-    if (/感谢|如下|上述|详见|一、|（一）|（二）|功能介绍/.test(turn)) score += 20;
-    if (R.hasDocumentStructure?.(turn)) score += 25;
+    if (/感谢|如下|上述|详见|一、|（一）|（二）|功能介绍|pageKey|https?:|\/#\//.test(turn)) score += 20;
+    if (R.hasDocumentStructure?.(turn) || R.hasTechnicalNoise?.(turn)) score += 25;
     return score;
   }
 

@@ -494,26 +494,38 @@
     </footer>
 
     <script src="../script.js"></script>
-    <script src="/tools/knowledge-voice/textProcessingRules.js?v=9"></script>
-    <script src="/tools/knowledge-voice/localKnowledgeEngine.js?v=9"></script>
-    <script src="/tools/knowledge-voice/knowledgeTransformPrompts.js?v=9"></script>
-    <script src="/tools/knowledge-voice/platformExport.js?v=9"></script>
-    <script src="/tools/knowledge-voice/knowledgeTransform.js?v=9"></script>
+    <script src="knowledge-voice/textProcessingRules.js?v=10"></script>
+    <script src="knowledge-voice/localKnowledgeEngine.js?v=10"></script>
+    <script src="knowledge-voice/knowledgeTransformPrompts.js?v=10"></script>
+    <script src="knowledge-voice/platformExport.js?v=10"></script>
+    <script src="knowledge-voice/knowledgeTransform.js?v=10"></script>
     <script>
+        function showLoadError(msg) {
+            console.error(msg);
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => alert(msg));
+            } else {
+                setTimeout(() => alert(msg), 0);
+            }
+        }
+
         function assertKVModules() {
             const missing = [];
             if (!window.KVTextRules) missing.push('textProcessingRules.js');
-            if (!window.KVLocalEngine) missing.push('localKnowledgeEngine.js');
+            if (!window.KVLocalEngine || typeof window.KVLocalEngine.localExtractFindings !== 'function') {
+                missing.push('localKnowledgeEngine.js');
+            }
             if (!window.KVPrompts) missing.push('knowledgeTransformPrompts.js');
-            if (!window.KVTransform) missing.push('knowledgeTransform.js');
+            if (!window.KVTransform || typeof window.KVTransform.parseUploadedFile !== 'function') {
+                missing.push('knowledgeTransform.js');
+            }
             if (missing.length) {
-                throw new Error('脚本模块未加载：' + missing.join('、') + '。请按 Ctrl+Shift+R 强制刷新，或检查网络能否访问 /tools/knowledge-voice/ 目录。');
+                throw new Error('脚本模块未加载：' + missing.join('、') + '。请按 Ctrl+Shift+R 强制刷新；若仍失败，请检查 knowledge-voice 目录下 JS 是否可访问。');
             }
         }
 
         try { assertKVModules(); } catch (e) {
-            console.error(e);
-            document.addEventListener('DOMContentLoaded', () => alert(e.message));
+            showLoadError(e.message);
         }
         let lastResult = null;
         let uploadedText = '';
@@ -586,6 +598,7 @@
 
         async function refreshFileParse() {
             if (!uploadedFile) return;
+            assertKVModules();
             const parseOptions = getParseOptions();
             if (isStructuredFile(uploadedFile.name)) {
                 fileAnalysis = await KVTransform.analyzeUploadedFile(uploadedFile, parseOptions);
@@ -615,6 +628,7 @@
             document.getElementById('fileName').textContent = '正在解析 ' + file.name + '...';
             document.getElementById('columnMappingPanel').classList.remove('active');
             try {
+                assertKVModules();
                 if (isStructuredFile(file.name)) {
                     fileAnalysis = await KVTransform.analyzeUploadedFile(file);
                     renderColumnMappingPanel(fileAnalysis);

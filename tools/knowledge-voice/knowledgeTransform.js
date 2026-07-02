@@ -1,5 +1,15 @@
 /** 主流程编排 — 内置规则优先，LLM 可选增强 */
 (function (global) {
+  if (!global.KVTextRules || !global.KVPrompts) {
+    console.error('[KVTransform] 依赖未加载: KVTextRules=', !!global.KVTextRules, 'KVPrompts=', !!global.KVPrompts);
+    global.KVTransform = {
+      transformKnowledgeToVoice: () => Promise.reject(new Error('脚本模块未完整加载，请 Ctrl+Shift+R 强制刷新页面')),
+      parseUploadedFile: () => Promise.reject(new Error('脚本模块未完整加载，请 Ctrl+Shift+R 强制刷新页面')),
+      analyzeUploadedFile: () => Promise.reject(new Error('脚本模块未完整加载，请 Ctrl+Shift+R 强制刷新页面'))
+    };
+    return;
+  }
+
   const { preprocessText, applyLayer1ToEntry, chunkText, ensureCategoryPath, stripHtml } = global.KVTextRules;
   const { buildExtractPrompt, buildVoiceifyPrompt, buildDedupPrompt, buildSimilarQuestionsPrompt } = global.KVPrompts;
 

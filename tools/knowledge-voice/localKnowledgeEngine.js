@@ -1,5 +1,10 @@
 /** 内置规则引擎 — 本地拆解 / 语音化 / 去重 / 相似问（优先于 LLM） */
 (function (global) {
+  if (!global.KVTextRules) {
+    console.error('[KVLocalEngine] KVTextRules 未加载');
+    global.KVLocalEngine = {};
+    return;
+  }
   const R = global.KVTextRules;
 
   function inferCategory(text, config) {

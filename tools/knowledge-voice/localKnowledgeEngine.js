@@ -116,7 +116,9 @@
       intentTag,
       keywords: extractKeywords(q + a),
       sourceExcerpt: a.slice(0, 200),
-      isComplex: R.detectSensitive(q + a) || a.length > 600 || /<[^>]+>/.test(answer)
+      isComplex: R.detectSensitive(q + a) || a.length > 600 || /<[^>]+>/.test(answer),
+      rawAnswerLength: a.length,
+      hasHtml: /<[^>]+>/.test(answer)
     });
   }
 
@@ -175,12 +177,12 @@
 
   function oralizeAnswerTone(answer, isFirstTurn, config) {
     const maxLen = config?.maxAnswerLength || 120;
-    let a = (answer || '').trim();
+    let a = R.stripFormalOpenings(answer || '');
     if (!a) return a;
     a = R.oralizeFormalPhrases(a);
-    const prefixReserve = isFirstTurn && !/^(您好|你好)/.test(a) && a.length > 8 ? 3 : 0;
+    const prefixReserve = isFirstTurn && a.length > 8 ? 3 : 0;
     a = R.enforceTurnLength(a, maxLen, prefixReserve);
-    if (isFirstTurn && prefixReserve) {
+    if (isFirstTurn && prefixReserve && !/^(您好|你好)/.test(a)) {
       a = '您好，' + a.replace(/^[，,]/, '');
     }
     a = a.replace(/[，,]+。$/g, '。').replace(/[，,]$/g, '');
@@ -297,7 +299,10 @@
   }
 
   function needsLLMVoiceify(entry) {
-    return entry.isComplex || (entry.answerTurns || []).some(t => t.length > 200);
+    if (entry.isComplex) return true;
+    if (entry.hasHtml && (entry.rawAnswerLength || 0) > 80) return true;
+    if ((entry.rawAnswerLength || 0) > 250) return true;
+    return (entry.answerTurns || []).some(t => t.length > 200);
   }
 
   global.KVLocalEngine = {

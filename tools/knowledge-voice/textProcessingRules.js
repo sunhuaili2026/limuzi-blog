@@ -145,6 +145,23 @@
     return truncateAtSentence(turn, limit);
   }
 
+  /** 去掉客服套话开头，避免「您好，您好，感谢您…」 */
+  function stripFormalOpenings(text) {
+    let result = String(text ?? '').trim();
+    for (let i = 0; i < 3; i++) {
+      const next = result
+        .replace(/^您好[，,!\s]*/u, '')
+        .replace(/^你好[，,!\s]*/u, '')
+        .replace(/^(感谢|谢谢)(您)?(的)?(支持|关注|使用|来信|反馈|咨询)[，,。!！\s]*/u, '')
+        .replace(/^尊敬的用户[，,]\s*/u, '')
+        .replace(/^亲爱的用户[，,]\s*/u, '')
+        .trim();
+      if (next === result) break;
+      result = next;
+    }
+    return result;
+  }
+
   /** 书面语 → 播报口语（Layer1 确定性改写） */
   function oralizeFormalPhrases(text) {
     return (text || '')
@@ -376,6 +393,7 @@
     const maxLen = config.maxAnswerLength || 120;
     const maxTurns = config.maxAnswerTurns || 5;
     let answer = oralizeDocumentStructure(entry.answer || '');
+    answer = stripFormalOpenings(answer);
     answer = normalizePunctuation(answer);
     answer = stripCategoryTagsFromAnswer(answer);
     answer = oralizeFormalPhrases(answer);
@@ -394,9 +412,10 @@
 
     let answerTurns = splitAnswerTurns(answer, maxLen, maxTurns);
     answerTurns = answerTurns.map(turn => {
-      let t = stripBoilerplate(turn);
+      let t = stripBoilerplate(stripFormalOpenings(turn));
       const ordinals = (t.match(/第[一二三四五六七八九十\d]+，/g) || []).length;
-      if (t.length > maxLen || ordinals > 1) {
+      const sentences = t.split(/[。；]/).filter(s => s.trim().length > 4).length;
+      if (t.length > maxLen || ordinals > 1 || sentences > 2) {
         t = condenseForVoice(t, maxLen);
       }
       return t;
@@ -446,6 +465,7 @@
     normalizePunctuation,
     oralizeNumbers,
     oralizeDocumentStructure,
+    stripFormalOpenings,
     oralizeFormalPhrases,
     stripBoilerplate,
     condenseForVoice,

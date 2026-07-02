@@ -378,8 +378,9 @@
                     <div class="kv-field">
                         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                             <input type="checkbox" id="enableLLMEnhance" style="width:auto;">
-                            AI 增强（可选，默认仅用内置规则）
+                            AI 增强（调用大模型深度改写，较慢，适合 HTML/长文）
                         </label>
+                        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">未勾选时：仅内置规则，7700条约 3 秒，不调大模型</div>
                     </div>
                     <div class="kv-field">
                         <label>上传文件</label>
@@ -448,7 +449,7 @@
                         <div class="kv-stat"><div class="kv-stat-num" id="statMerged">0</div><div class="kv-stat-label">去重合并</div></div>
                         <div class="kv-stat"><div class="kv-stat-num" id="statConflict">0</div><div class="kv-stat-label">冲突</div></div>
                         <div class="kv-stat"><div class="kv-stat-num" id="statHuman">0</div><div class="kv-stat-label">需人工</div></div>
-                        <div class="kv-stat"><div class="kv-stat-num" id="statTime">0s</div><div class="kv-stat-label">耗时</div></div>
+                        <div class="kv-stat"><div class="kv-stat-num" id="statTime">0s</div><div class="kv-stat-label" id="statTimeLabel">耗时</div></div>
                     </div>
 
                     <div class="kv-toolbar" id="toolbar">
@@ -493,11 +494,11 @@
     </footer>
 
     <script src="../script.js"></script>
-    <script src="/tools/knowledge-voice/textProcessingRules.js?v=7"></script>
-    <script src="/tools/knowledge-voice/localKnowledgeEngine.js?v=7"></script>
-    <script src="/tools/knowledge-voice/knowledgeTransformPrompts.js?v=7"></script>
-    <script src="/tools/knowledge-voice/platformExport.js?v=7"></script>
-    <script src="/tools/knowledge-voice/knowledgeTransform.js?v=7"></script>
+    <script src="/tools/knowledge-voice/textProcessingRules.js?v=8"></script>
+    <script src="/tools/knowledge-voice/localKnowledgeEngine.js?v=8"></script>
+    <script src="/tools/knowledge-voice/knowledgeTransformPrompts.js?v=8"></script>
+    <script src="/tools/knowledge-voice/platformExport.js?v=8"></script>
+    <script src="/tools/knowledge-voice/knowledgeTransform.js?v=8"></script>
     <script>
         function assertKVModules() {
             const missing = [];
@@ -687,9 +688,18 @@
             document.getElementById('statMerged').textContent = result.audit.mergedCount || 0;
             document.getElementById('statConflict').textContent = (result.audit.conflicts || []).length;
             document.getElementById('statHuman').textContent = result.stats.humanRequiredCount || 0;
-            document.getElementById('statTime').textContent = Math.round((result.stats.processingTimeMs || 0) / 1000) + 's';
+            const secs = Math.round((result.stats.processingTimeMs || 0) / 1000);
+            const isLlm = result.stats.processingMode === 'builtin+llm';
+            document.getElementById('statTime').textContent = secs + 's';
+            document.getElementById('statTimeLabel').textContent = isLlm ? '耗时（含大模型）' : '耗时（仅内置规则）';
 
+            const modeLabel = isLlm ? '内置 + AI 大模型' : '仅内置规则（未调大模型）';
             const tbody = document.getElementById('previewBody');
+            const warnEl = document.getElementById('importReminder');
+            let warnHtml = `💡 处理方式：<strong>${modeLabel}</strong>。导入平台后请将问答设为「已上线」。`;
+            (result.warnings || []).forEach(w => { warnHtml += `<br>⚠️ ${esc(w.message)}`; });
+            warnEl.innerHTML = warnHtml;
+            warnEl.classList.add('active');
             tbody.innerHTML = result.entries.slice(0, 100).map(entry => {
                 const turns = entry.answerTurns || [];
                 const firstTurn = turns[0] || '';
@@ -738,6 +748,21 @@
             try { config = getConfig(); } catch (e) { alert(e.message); return; }
 
             try { assertKVModules(); } catch (e) { alert(e.message); return; }
+
+            const approx = (text.match(/问[：:]/g) || []).length;
+            const hasHtml = /<[^>]+>/.test(text);
+            if (!config.enableLLMEnhance && (approx > 300 || hasHtml)) {
+                const htmlNote = hasHtml ? '\n检测到答案含 HTML 标签，内置规则只能清理结构，无法深度口语化。' : '';
+                const go = confirm(
+                    `约 ${approx} 条知识。${htmlNote}\n\n当前【未勾选 AI 增强】→ 只用内置规则，通常几秒内完成，不会调用大模型。\n答案会做 HTML 清理、控长、去套话，但不会深度改写。\n\n如需大模型深度口语化，请勾选「AI 增强」后重试（需数分钟）。\n\n继续用内置规则转换？`
+                );
+                if (!go) return;
+            } else if (config.enableLLMEnhance && approx > 50) {
+                const go = confirm(
+                    `约 ${approx} 条知识。\n\n已勾选 AI 增强 → 将调用 DeepSeek 大模型处理 HTML/长答案条目（单次最多 200 条，预计需数分钟，请保持页面打开）。\n\n继续？`
+                );
+                if (!go) return;
+            }
 
             const btn = document.getElementById('startBtn');
             btn.disabled = true;

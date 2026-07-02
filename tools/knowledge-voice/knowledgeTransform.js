@@ -110,16 +110,27 @@
       answerTurns: entries[i]?.answerTurns
     }));
 
-    if (!complex.length) return entries;
+    if (!complex.length) {
+      onProgress?.({ phase: 'voiceifying', message: `内置规则完成（${entries.length} 条，无符合 AI 增强条件的 HTML/长文条目）` });
+      return entries;
+    }
+
+    const maxLlm = config.llmVoiceifyMaxEntries || 200;
+    const toProcess = complex.slice(0, maxLlm);
+    const llmSkipped = complex.length - toProcess.length;
 
     onProgress?.({
       phase: 'voiceifying',
-      message: `AI 增强改写复杂条目 (${complex.length} 条)...`
+      message: `AI 大模型改写中 (${toProcess.length}/${complex.length} 条，请稍候)...`
     });
 
     const batchSize = 8;
-    for (let i = 0; i < complex.length; i += batchSize) {
-      const batch = complex.slice(i, i + batchSize);
+    for (let i = 0; i < toProcess.length; i += batchSize) {
+      const batch = toProcess.slice(i, i + batchSize);
+      onProgress?.({
+        phase: 'voiceifying',
+        message: `AI 大模型改写中 (${Math.min(i + batchSize, toProcess.length)}/${toProcess.length})...`
+      });
       try {
         const prompt = buildVoiceifyPrompt(config, batch);
         const content = await callLLM([{ role: 'user', content: prompt }]);
@@ -148,6 +159,10 @@
         console.warn('LLM voiceify batch failed', e);
       }
       await sleep(400);
+    }
+
+    if (llmSkipped > 0) {
+      entries.llmMeta = { llmSkipped, llmProcessed: toProcess.length };
     }
 
     return entries;
@@ -245,6 +260,8 @@
     }
 
     let entries = await phase2Voiceify(findings, config, onProgress);
+    const llmMeta = entries.llmMeta;
+    if (entries.llmMeta) delete entries.llmMeta;
     const dedupResult = await phase3Dedup(entries, config, onProgress);
     entries = dedupResult.entries;
 
@@ -263,13 +280,27 @@
       processingMode: config.enableLLMEnhance ? 'builtin+llm' : 'builtin'
     };
 
+    const warnings = [];
+    if (llmMeta?.llmSkipped > 0) {
+      warnings.push({
+        type: 'llm_cap',
+        message: `AI 大模型已改写 ${llmMeta.llmProcessed} 条，另有 ${llmMeta.llmSkipped} 条仍用内置规则（单次上限 ${config.llmVoiceifyMaxEntries || 200} 条）。`
+      });
+    }
+    if (!config.enableLLMEnhance) {
+      warnings.push({
+        type: 'builtin_only',
+        message: `本次使用内置规则处理 ${entries.length} 条（未调用大模型，耗时约 ${Math.round((Date.now() - start) / 1000)} 秒）。深度口语化请勾选「AI 增强」。`
+      });
+    }
+
     return {
       companyName: config.companyName,
       entries,
       similarQuestions,
       audit: dedupResult.audit,
       stats,
-      warnings: []
+      warnings
     };
   }
 

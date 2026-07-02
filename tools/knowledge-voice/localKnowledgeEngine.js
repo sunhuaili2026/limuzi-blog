@@ -179,7 +179,7 @@
         rawAnswerLength: f.rawAnswerLength
       }, config);
 
-      entry.answerTurns = entry.answerTurns.map((turn, i) => oralizeAnswerTone(turn, i === 0, config));
+      entry.answerTurns = entry.answerTurns.map((turn, i) => oralizeAnswerTone(turn, i === 0, config, f.question));
       entry._voiceQuality = scoreVoiceQuality(entry, f, config);
       if (!entry.standardQuestion.match(/[？?]$/)) {
         entry.standardQuestion = ensureQuestion(entry.standardQuestion);
@@ -195,18 +195,19 @@
     if ((finding.rawAnswerLength || 0) > 300) score += 15;
     if (finding.hasHtml) score += 10;
     if (turn.length > (config?.maxAnswerLength || 120)) score += 20;
-    if (/感谢|如下|上述|详见/.test(turn)) score += 15;
+    if (/感谢|如下|上述|详见|一、|（一）|（二）|功能介绍/.test(turn)) score += 20;
+    if (R.hasDocumentStructure?.(turn)) score += 25;
     return score;
   }
 
-  function oralizeAnswerTone(answer, isFirstTurn, config) {
+  function oralizeAnswerTone(answer, isFirstTurn, config, question) {
     const maxLen = config?.maxAnswerLength || 120;
     let a = R.stripFormalOpenings(answer || '');
     a = a.replace(/^[！!，,\s]+/, '').replace(/^您好[，,!\s]*您好/u, '');
     if (!a || /^[！!，,\s]+$/.test(a)) return '';
     a = R.oralizeFormalPhrases(a);
+    a = R.polishVoiceAnswer(a, question || '', maxLen - (isFirstTurn ? 3 : 0));
     const prefixReserve = isFirstTurn && a.length > 8 ? 3 : 0;
-    a = R.enforceTurnLength(a, maxLen, prefixReserve);
     if (isFirstTurn && prefixReserve && !/^(您好|你好)/.test(a)) {
       a = '您好，' + a.replace(/^[，,]/, '');
     }

@@ -59,6 +59,10 @@
     // 大类标题：1 产品类 / 2 服务类
     result = result.replace(/(?:^|\n|\s)\d{1,2}\s*[\u4e00-\u9fa5A-Za-z]{2,8}类\s*/g, ' ');
 
+    // 中文编号章节：一、功能介绍 / （二）删除圈子动态
+    result = result.replace(/(?:^|\s)[一二三四五六七八九十百千]+[、.)]\s*[\u4e00-\u9fa5]{2,16}\s*/g, ' ');
+    result = result.replace(/(?:^|\s)[（(][一二三四五六七八九十\d]+[)）]\s*[\u4e00-\u9fa5]{2,20}\s*/g, ' ');
+
     // 无编号的章节小标题（含 h1-h6 残留文本）
     const sectionRe = new RegExp(
       `(?:^|[\\n\\s])(${CS_SECTION_HEADERS.join('|')})[：:：]?\\s*`,
@@ -91,7 +95,8 @@
     '活动背景', '活动规则', '活动详情', '活动内容', '参与方式', '适用条件', '注意事项',
     '温馨提示', '申请条件', '办理流程', '所需材料', '监督范围', '奖励说明', '投诉渠道',
     '活动说明', '活动介绍', '活动对象', '活动时间', '活动范围', '兑换说明', '使用说明',
-    '服务说明', '权益说明', '保修说明', '退换说明', '常见问题', '问题解答', '答复如下'
+    '服务说明', '权益说明', '保修说明', '退换说明', '常见问题', '问题解答', '答复如下',
+    '功能介绍', '功能说明', '操作步骤', '操作说明', '使用方法', '删除方法', '发布方法'
   ];
 
   const CS_BOILERPLATE_PATTERNS = [
@@ -122,14 +127,158 @@
   ]);
 
   function extractQuestionKeywords(question) {
-    const words = (String(question ?? '').match(/[\u4e00-\u9fa5]{2,8}/g) || [])
+    const q = String(question ?? '').replace(/[？?。！!，,]/g, '');
+    const words = (q.match(/[\u4e00-\u9fa5]{2,6}/g) || [])
       .filter(w => !QUESTION_STOPWORDS.has(w));
-    return [...new Set(words)].slice(0, 8);
+    const extras = [];
+    if (/删除|删掉|移除/.test(q)) extras.push('删除');
+    if (/发布|发帖|发动态|发圈/.test(q)) extras.push('发布', '动态');
+    if (/N币|n币|奖励|积分/.test(q)) extras.push('N币', '奖励', '积分');
+    if (/圈子|社区|动态/.test(q)) extras.push('圈子', '动态');
+    if (/功能|是什么|什么意思|干嘛|做什么/.test(q)) extras.push('功能', '介绍');
+    if (/怎么|如何|怎样/.test(q)) extras.push('操作', '步骤');
+    if (/绑定|解绑|注册|登录|注销|退出/.test(q)) extras.push('绑定', '注册', '登录', '注销');
+    return [...new Set([...words, ...extras])].slice(0, 10);
+  }
+
+  function hasDocumentStructure(text) {
+    const s = String(text ?? '');
+    return /[一二三四五六七八九十]+[、.)]\s*[\u4e00-\u9fa5]|[（(][一二三四五六七八九十\d]+[)）]\s*[\u4e00-\u9fa5]/.test(s);
+  }
+
+  /** 按「一、」「（二）」等切分文档段落 */
+  function splitDocumentSections(text) {
+    const raw = String(text ?? '').trim();
+    if (!raw) return [];
+
+    const normalized = raw
+      .replace(/([。；！!?])([（(][一二三四五六七八九十\d]+[)）])/g, '$1 $2')
+      .replace(/([。；！!?])([一二三四五六七八九十]+[、.)])/g, '$1 $2');
+
+    const markerRe = /(?:^|\s)(?:([一二三四五六七八九十]+)[、.)]\s*([\u4e00-\u9fa5]{2,20})|[（(]([一二三四五六七八九十\d]+)[)）]\s*([\u4e00-\u9fa5]{2,24}))/g;
+    const markers = [];
+    let m;
+    while ((m = markerRe.exec(normalized)) !== null) {
+      markers.push({
+        index: m.index,
+        len: m[0].length,
+        title: (m[2] || m[4] || '').trim()
+      });
+    }
+    if (!markers.length) return [{ title: '', body: raw }];
+
+    const sections = [];
+    for (let i = 0; i < markers.length; i++) {
+      const bodyStart = markers[i].index + markers[i].len;
+      const bodyEnd = i + 1 < markers.length ? markers[i + 1].index : normalized.length;
+      const body = normalized.slice(bodyStart, bodyEnd).trim();
+      if (body) sections.push({ title: markers[i].title, body });
+    }
+    return sections.length ? sections : [{ title: '', body: raw }];
+  }
+
+  function scoreSectionForQuestion(section, keywords, question) {
+    let score = 0;
+    const q = String(question ?? '');
+    const title = section.title || '';
+    const body = section.body || '';
+    keywords.forEach(kw => {
+      if (title.includes(kw)) score += 25;
+      if (body.includes(kw)) score += 12;
+    });
+    if (/怎么|如何|怎样|在哪|哪里|能不能|可以/.test(q)) {
+      if (/删除|发布|设置|绑定|注销|开通|关闭|修改|更换|取消|退出/.test(title)) score += 15;
+      if (/介绍|背景|说明|什么是|功能介绍|奖励/.test(title) && !/删除|发布|设置|操作/.test(title)) score -= 12;
+    }
+    if (/是什么|什么意思|什么是|干嘛|做什么/.test(q)) {
+      if (/介绍|功能|说明|什么是/.test(title)) score += 15;
+      if (/删除|操作步骤/.test(title)) score -= 5;
+    }
+    if (/删除/.test(q) && /删除/.test(title + body)) score += 20;
+    if (/删除/.test(q) && /介绍|奖励|背景/.test(title) && !/删除/.test(title)) score -= 20;
+    if (/发布/.test(q) && /发布/.test(title + body)) score += 20;
+    if (/N币|奖励|积分/.test(q) && /N币|奖励|积分/.test(title + body)) score += 15;
+    if (/步骤|操作|点击|打开|App|APP/.test(body)) score += 4;
+    return score;
+  }
+
+  function pickSectionForQuestion(text, question) {
+    const sections = splitDocumentSections(text);
+    if (sections.length <= 1) return text;
+    const keywords = extractQuestionKeywords(question);
+    const ranked = [...sections].sort((a, b) =>
+      scoreSectionForQuestion(b, keywords, question) - scoreSectionForQuestion(a, keywords, question));
+    const best = ranked[0];
+    if (best && scoreSectionForQuestion(best, keywords, question) > 0) {
+      return best.body;
+    }
+    return ranked.find(s => !/介绍|背景|说明/.test(s.title))?.body || sections[sections.length - 1].body;
+  }
+
+  function stripSectionHeaders(text) {
+    return String(text ?? '')
+      .replace(/(?:^|\s)[一二三四五六七八九十百千]+[、.)]\s*[\u4e00-\u9fa5]{2,20}\s*/g, ' ')
+      .replace(/(?:^|\s)[（(][一二三四五六七八九十\d]+[)）]\s*[\u4e00-\u9fa5]{2,24}\s*/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  /** App 内路径与操作步骤 → 可听懂的口语 */
+  function oralizeAppNavigation(text) {
+    let t = String(text ?? '');
+    t = t.replace(/【([^】]+)】/g, '$1');
+    t = t.replace(/([\u4e00-\u9fa5A-Za-z0-9]+)\s*[-—/\\|]\s*([\u4e00-\u9fa5A-Za-z0-9]+)/g, '$1，再点$2');
+    t = t.replace(/依次点击|依次点/g, '按顺序点');
+    t = t.replace(/联系下方/g, '点下方');
+    t = t.replace(/找到对应/g, '找到那条');
+    t = t.replace(/找到该/g, '找到这条');
+    t = t.replace(/点击下方(?:更多|转发|菜单|操作)?(?:按钮|图标)?/g, '点下方按钮');
+    t = t.replace(/选择删除即可/g, '点删除就行');
+    t = t.replace(/选择([^，,。；]{1,6})即可/g, '点$1就行');
+    t = t.replace(/即可[。.]?$/g, '就行');
+    t = t.replace(/打开九号出行\s*App/gi, '打开九号出行App');
+    t = t.replace(/九号出行\s*App/gi, '九号出行App');
+    return t.replace(/\s{2,}/g, ' ').trim();
+  }
+
+  /** 压缩 App 操作步骤，保留关键 2-3 步 */
+  function compressAppSteps(text, maxLen) {
+    let t = String(text ?? '').trim();
+    if (!t || t.length <= maxLen) return t;
+    if (!/打开|点|进入|找到|选择|删除|发布/.test(t)) return t;
+
+    const openMatch = t.match(/打开[^，,。；]{2,24}/);
+    const pathMatch = t.match(/点[^，,。；]{1,8}(?:，再点[^，,。；]{1,8})?/);
+    const actionMatch = t.match(/(?:找到[^，,。；]{2,16}[，,])?(?:点[^，,。；]{1,8}就行|选择[^，,。；]{1,8}就行|删除就行)/);
+
+    const parts = [];
+    if (openMatch) parts.push(openMatch[0]);
+    if (pathMatch) parts.push(pathMatch[0]);
+    if (actionMatch) parts.push(actionMatch[0].replace(/选择/, '点'));
+    if (parts.length >= 2) {
+      const compressed = parts.join('，') + '。';
+      if (compressed.length <= maxLen) return compressed;
+    }
+    return t;
+  }
+
+  /** 最终润色：一条答案只讲一件事，像客服在电话里说 */
+  function polishVoiceAnswer(text, question, maxLen) {
+    let t = pickSectionForQuestion(text, question);
+    t = stripSectionHeaders(t);
+    t = stripFormalOpenings(stripBoilerplate(t));
+    t = oralizeAppNavigation(t);
+    t = oralizeFormalPhrases(t);
+    t = compressAppSteps(t, maxLen);
+    t = t.replace(/功能介绍\s*/g, '');
+    t = t.replace(/，{2,}/g, '，').replace(/^[，,]\s*/, '');
+    return enforceTurnLength(t, maxLen, 0);
   }
 
   function splitIntoClauses(text) {
-    return String(text ?? '')
-      .split(/(?=第[一二三四五六七八九十\d]+，)|[。；！？\n]+/)
+    const pre = stripSectionHeaders(String(text ?? ''));
+    return pre
+      .split(/(?=[一二三四五六七八九十]+[、.)]|[（(][一二三四五六七八九十\d]+[)）]|第[一二三四五六七八九十\d]+，)|[。；！？\n]+/)
       .map(s => s.trim()
         .replace(/^第[一二三四五六七八九十\d]+，/, '')
         .replace(/^[•·●○◆▪\-—]\s*/, ''))
@@ -182,7 +331,7 @@
       if (!cleaned || cleaned.length < 4) continue;
       const key = cleaned.slice(0, 10);
       if (seen.has(key)) continue;
-      if (picked.length >= 2) break;
+      if (picked.length >= 1) break;
       if (total + cleaned.length + 1 > maxLen - 4) continue;
       seen.add(key);
       picked.push(cleaned);
@@ -199,33 +348,30 @@
    */
   function deepVoiceifyAnswer(question, rawAnswer, maxLen) {
     let text = oralizeDocumentStructure(rawAnswer || '');
+    text = pickSectionForQuestion(text, question);
     text = stripFormalOpenings(stripBoilerplate(text));
     text = normalizePunctuation(text);
     text = stripCategoryTagsFromAnswer(text);
-    text = oralizeFormalPhrases(text);
 
     const plainLen = text.replace(/\s/g, '').length;
     if (!text) return '';
-    if (plainLen <= maxLen && !isOverlyFormal(text)) return text;
 
     let condensed = condenseForVoice(text, maxLen, question);
-    condensed = oralizeFormalPhrases(stripFormalOpenings(condensed));
+    condensed = polishVoiceAnswer(condensed || text, question, maxLen);
 
-    if (condensed && !isOverlyFormal(condensed)) {
-      return enforceTurnLength(condensed, maxLen, 0);
+    if (condensed && !isOverlyFormal(condensed) && !hasDocumentStructure(condensed)) {
+      return condensed;
     }
 
-    // 仍偏书面：再压一轮，只留与问题最相关的 1 句
     const keywords = extractQuestionKeywords(question);
     const best = splitIntoClauses(text)
       .sort((a, b) => scoreClauseForQuestion(b, keywords) - scoreClauseForQuestion(a, keywords))[0];
     if (best) {
-      condensed = oralizeFormalPhrases(stripFormalOpenings(best));
-      return enforceTurnLength(condensed, maxLen, 0);
+      condensed = polishVoiceAnswer(best, question, maxLen);
+      if (condensed) return condensed;
     }
 
-    const fallback = oralizeFormalPhrases(stripFormalOpenings(truncateAtSentence(text, maxLen * 2)));
-    return enforceTurnLength(fallback || text.slice(0, maxLen), maxLen, 0);
+    return polishVoiceAnswer(text, question, maxLen);
   }
 
   /** 硬控单轮字数（含「您好，」前缀预留） */
@@ -258,10 +404,9 @@
     return (text || '')
       .replace(/该商品|该产品/g, '这款产品')
       .replace(/上述|如下所述|具体如下/g, '')
-      .replace(/详见/g, '您可以了解')
-      .replace(/点击/g, '联系')
+      .replace(/详见/g, '可以了解')
       .replace(/查看/g, '了解')
-      .replace(/扫码/g, '操作')
+      .replace(/扫码/g, '扫一扫')
       .replace(/登录/g, '进入')
       .replace(/官方网站|官方平台/g, '官网')
       .replace(/授权代理商\/门店/g, '授权门店')
@@ -270,6 +415,9 @@
       .replace(/也就是说[，,]?/g, '')
       .replace(/尊敬的用户[，,]?/g, '')
       .replace(/亲爱的用户[，,]?/g, '')
+      .replace(/自主发布/g, '自己发')
+      .replace(/优质内容/g, '好的内容')
+      .replace(/获取平台/g, '拿到')
       .replace(/[（(]详见[^）)]*[）)]/g, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
@@ -490,7 +638,8 @@
     const maxTurns = config.maxAnswerTurns || 5;
     const question = entry.question || entry.standardQuestion || '';
     const rawAnswer = entry.answer || '';
-    const needsDeep = entry.hasHtml || plainTextLength(rawAnswer) > maxLen * 1.2 || isOverlyFormal(stripHtml(rawAnswer));
+    const needsDeep = entry.hasHtml || plainTextLength(rawAnswer) > maxLen * 1.2
+      || isOverlyFormal(stripHtml(rawAnswer)) || hasDocumentStructure(stripHtml(rawAnswer));
 
     let answer;
     if (needsDeep) {
@@ -500,8 +649,8 @@
       answer = stripFormalOpenings(answer);
       answer = normalizePunctuation(answer);
       answer = stripCategoryTagsFromAnswer(answer);
-      answer = oralizeFormalPhrases(answer);
       answer = stripBoilerplate(answer);
+      answer = polishVoiceAnswer(answer, question, maxLen);
     }
     answer = oralizeNumbers(answer);
 
@@ -517,11 +666,11 @@
 
     let answerTurns = splitAnswerTurns(answer, maxLen, maxTurns);
     answerTurns = answerTurns.map(turn => {
-      let t = stripBoilerplate(stripFormalOpenings(turn));
+      let t = polishVoiceAnswer(stripFormalOpenings(turn), question, maxLen);
       const ordinals = (t.match(/第[一二三四五六七八九十\d]+，/g) || []).length;
-      const sentences = t.split(/[。；]/).filter(s => s.trim().length > 4).length;
-      if (t.length > maxLen || ordinals > 1 || sentences > 2 || isOverlyFormal(t)) {
+      if (t.length > maxLen || ordinals > 1 || hasDocumentStructure(t) || isOverlyFormal(t)) {
         t = condenseForVoice(t, maxLen, question);
+        t = polishVoiceAnswer(t, question, maxLen);
       }
       return t;
     }).filter(t => t && t.length > 2);
@@ -575,6 +724,12 @@
     stripBoilerplate,
     condenseForVoice,
     deepVoiceifyAnswer,
+    polishVoiceAnswer,
+    oralizeAppNavigation,
+    pickSectionForQuestion,
+    splitDocumentSections,
+    hasDocumentStructure,
+    stripSectionHeaders,
     extractQuestionKeywords,
     splitIntoClauses,
     isOverlyFormal,

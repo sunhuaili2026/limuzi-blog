@@ -378,9 +378,9 @@
                     <div class="kv-field">
                         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                             <input type="checkbox" id="enableLLMEnhance" style="width:auto;" checked>
-                            AI 增强（大模型逐条精修，较慢）
+                            AI 增强（全量逐条精修，较慢）
                         </label>
-                        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">内置深度口语化会先处理全部条目；勾选后每条知识单独调用大模型精修（7700 条约需数小时，请保持页面打开）</div>
+                        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">勾选后：全部条目每条单独调用大模型改写（7700 条约数小时，请保持页面打开）</div>
                     </div>
                     <div class="kv-field">
                         <label>上传文件</label>
@@ -494,7 +494,7 @@
     </footer>
 
     <script src="../script.js"></script>
-    <script src="knowledge-voice/kv-bundle.js?v=17" charset="UTF-8"></script>
+    <script src="knowledge-voice/kv-bundle.js?v=18" charset="UTF-8"></script>
     <script>
         function showLoadError(msg) {
             console.error(msg);
@@ -684,7 +684,11 @@
         function updateProgress(p) {
             document.getElementById('progressPanel').classList.add('active');
             document.getElementById('progressText').textContent = p.message || p.phase;
-            document.getElementById('progressFill').style.width = (PHASE_PROGRESS[p.phase] || 50) + '%';
+            let pct = PHASE_PROGRESS[p.phase] || 50;
+            if (p.phase === 'voiceifying' && p.current > 0 && p.total > 0) {
+                pct = 35 + Math.round((p.current / p.total) * 30);
+            }
+            document.getElementById('progressFill').style.width = pct + '%';
         }
 
         function renderResult(result) {
@@ -774,7 +778,7 @@
             } else if (config.enableLLMEnhance && approx > 0) {
                 const estMin = Math.max(1, Math.ceil(approx * 2 / 60));
                 const go = confirm(
-                    `约 ${approx} 条知识。\n\n处理流程：\n1. 内置深度口语化（全部条目，约十秒级）\n2. AI 大模型逐条精修（每条单独调用，约 ${estMin} 分钟以上）\n\n请保持页面打开，继续？`
+                    `约 ${approx} 条知识。\n\n处理流程：\n1. 内置深度口语化（全部条目，约十秒）\n2. AI 大模型全量逐条精修（每条单独调用，约 ${estMin} 分钟以上）\n\n时间不是问题的话，请保持页面打开直到完成。继续？`
                 );
                 if (!go) return;
             }

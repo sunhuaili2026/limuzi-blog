@@ -149,7 +149,9 @@
 
       onProgress?.({
         phase: 'voiceifying',
-        message: 'AI 大模型逐条精修中 (' + (i + 1) + '/' + toProcess.length + ')...'
+        message: 'AI 大模型逐条精修中 (' + (i + 1) + '/' + toProcess.length + ')...',
+        current: i + 1,
+        total: toProcess.length
       });
 
       try {
@@ -187,7 +189,7 @@
     entries.llmMeta = {
       llmSkipped,
       llmProcessed: toProcess.length,
-      llmCandidates: maxLlm > 0 ? toProcess.length + llmSkipped : findings.length
+      llmCandidates
     };
 
     return entries;

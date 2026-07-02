@@ -1,4 +1,4 @@
-/* KV Bundle - 2026-07-02T08:51:45Z */
+/* KV Bundle - 2026-07-02T08:56:22Z */
 /* --- textProcessingRules.js --- */
 /** Layer 1 规则引擎 — 确定性文字处理 */
 (function (global) {
@@ -1695,7 +1695,9 @@ ${JSON.stringify(sample, null, 2)}
 
       onProgress?.({
         phase: 'voiceifying',
-        message: 'AI 大模型逐条精修中 (' + (i + 1) + '/' + toProcess.length + ')...'
+        message: 'AI 大模型逐条精修中 (' + (i + 1) + '/' + toProcess.length + ')...',
+        current: i + 1,
+        total: toProcess.length
       });
 
       try {
@@ -1733,7 +1735,7 @@ ${JSON.stringify(sample, null, 2)}
     entries.llmMeta = {
       llmSkipped,
       llmProcessed: toProcess.length,
-      llmCandidates: maxLlm > 0 ? toProcess.length + llmSkipped : findings.length
+      llmCandidates
     };
 
     return entries;

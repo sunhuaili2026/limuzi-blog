@@ -319,8 +319,9 @@
 
   const QUESTION_HEADERS = ['标准问', '问题', '问句', '用户问题', '用户问', '提问', 'question', 'query', 'faq_question', 'std_question', 'ask', 'q_text', 'question_text', 'title', '标题'];
   const ANSWER_HEADERS = ['答案内容', '答案', '内容', '回复', '解答', 'answer', 'content', 'response', 'faq_answer', 'reply', 'answer_content', '简介内容', 'a_text', 'answer_text', '话术', '播报'];
-  const CATEGORY_PATH_HEADERS = ['所属目录', '目录路径', '知识路径', 'category_path', 'full_path', 'catalog_path', 'path', '知识目录'];
-  const CATEGORY_PART_HEADERS = ['目录', '分类', 'category', '所属分类', '品类', '类目', '产品线', '业务线', '模块', '部门', 'category_name', 'sub_category', 'parent_category', 'product_line', 'catalog', 'folder', 'module', 'dept', '一级', '二级', '三级', 'level1', 'level2', 'level3'];
+  const CATEGORY_PATH_HEADERS = ['所属目录', '目录路径', '知识路径', 'category_path', 'full_path', 'catalog_path', '知识目录'];
+  const CATEGORY_PART_HEADERS = ['category_name', 'sub_category', 'parent_category', 'product_line', '一级目录', '二级目录', '三级目录', '目录', '分类', 'category', '所属分类', '品类', '类目', '产品线', '业务线', '模块', '部门', 'catalog', 'folder', 'module', 'dept', '一级', '二级', '三级', 'level1', 'level2', 'level3', '标签', 'tag_name', 'biz_type', '业务类型', '知识分类'];
+  const SKIP_CATEGORY_HEADERS = ['oss_path', 'file_path', 'filepath', 'storage_path', 'object_key', 's3_path', 'bucket', 'url', 'uri', 'link', 'href', 'image', 'img', 'avatar', 'icon'];
   const SKIP_HEADERS = ['id', '_id', 'uuid', 'question_id', 'answer_id', 'category_id', 'parent_id', 'workflow_id', 'created_at', 'updated_at', 'create_time', 'update_time', 'deleted', 'status', 'type', 'sort', 'order', 'version'];
 
   function shouldSkipHeader(h) {
@@ -344,14 +345,21 @@
     return !shouldSkipHeader(h) && headerMatches(h, ANSWER_HEADERS) && !headerMatches(h, QUESTION_HEADERS);
   }
 
+  function isCategoryHeaderExcluded(h) {
+    if (!h) return true;
+    return SKIP_CATEGORY_HEADERS.some(skip => h === skip || h.includes(skip));
+  }
+
   function isCategoryPathHeader(h) {
-    return !shouldSkipHeader(h) && headerMatches(h, CATEGORY_PATH_HEADERS);
+    if (shouldSkipHeader(h) || isCategoryHeaderExcluded(h)) return false;
+    if (h === 'path' || h.endsWith('_path')) return false;
+    return headerMatches(h, CATEGORY_PATH_HEADERS);
   }
 
   function isCategoryPartHeader(h) {
-    if (shouldSkipHeader(h)) return false;
+    if (shouldSkipHeader(h) || isCategoryHeaderExcluded(h)) return false;
     if (isQuestionHeader(h) || isAnswerHeader(h)) return false;
-    if (/简介|summary|desc|remark|note|comment|memo|标签|tag/.test(h)) return false;
+    if (/简介|summary|desc|remark|note|comment|memo|content|answer|title|question/.test(h)) return false;
     return headerMatches(h, CATEGORY_PART_HEADERS) || /^(cat|dir|level|l)\d*$/.test(h);
   }
 
@@ -404,15 +412,49 @@
     return mapping;
   }
 
-  function buildCategoryFromCells(cells, mapping, fallback = '通用') {
+  function buildCategoryFromCells(cells, mapping) {
     const indexes = (mapping.categories || []).filter(idx => idx >= 0);
     const parts = indexes.map(idx => String(cells[idx] ?? '').trim()).filter(Boolean);
-    if (!parts.length) return fallback;
+    if (!parts.length) return '';
     if (parts.length === 1 && /[/>\\|]/.test(parts[0])) {
-      const split = parts[0].split(/[/>\\|]/).map(s => s.trim()).filter(Boolean);
-      return split.join('/') || fallback;
+      return parts[0];
     }
-    return parts.join('/') || fallback;
+    return parts.join('/');
+  }
+
+  function findCategoryValuesInRow(cells, mapping) {
+    const R = global.KVTextRules;
+    const used = new Set([mapping.question, mapping.answer, mapping.summary, ...(mapping.categories || [])]);
+    const scored = [];
+    cells.forEach((val, idx) => {
+      if (used.has(idx)) return;
+      const s = String(val ?? '').trim();
+      if (!R.isReadableCategoryValue(s)) return;
+      let score = /[\u4e00-\u9fa5]/.test(s) ? 5 : 1;
+      if (/产品|活动|服务|会员|参数|售后|咨询|营销|品类|系列|电动/.test(s)) score += 3;
+      if (s.length >= 2 && s.length <= 12) score += 1;
+      scored.push({ val: s, score });
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 3).map(s => s.val);
+  }
+
+  function resolveCategoryPath(cells, mapping, question, options = {}) {
+    const R = global.KVTextRules;
+    const companyName = options.companyName || '';
+    let raw = buildCategoryFromCells(cells, mapping);
+
+    const mappedParts = (mapping.categories || [])
+      .map(idx => String(cells[idx] ?? '').trim())
+      .filter(Boolean);
+    const mappedLooksTechnical = mappedParts.length > 0 && mappedParts.every(v => R.isTechnicalPathValue(v) || !R.isReadableCategoryValue(v));
+
+    if (mappedLooksTechnical || !raw || R.isTechnicalPathValue(raw)) {
+      const auto = findCategoryValuesInRow(cells, mapping);
+      if (auto.length) raw = auto.join('/');
+    }
+
+    return R.buildReadableCategory(raw, question, companyName);
   }
 
   function buildColumnList(headerRow, dataRows) {
@@ -454,10 +496,10 @@
     return { cleanRows, headerIdx, headerRow, dataRows, mapping, mappingSource };
   }
 
-  function rowToStructuredItem(cells, mapping, R) {
+  function rowToStructuredItem(cells, mapping, R, options = {}) {
     const question = cells[mapping.question] || '';
     let answer = cells[mapping.answer] || '';
-    const category = buildCategoryFromCells(cells, mapping);
+    const category = resolveCategoryPath(cells, mapping, question, options);
     const summary = mapping.summary >= 0 ? (cells[mapping.summary] || '') : '';
 
     if (!isValidQuestion(question)) return null;
@@ -479,7 +521,7 @@
     ctx.dataRows.forEach(row => {
       const cells = (row || []).map(c => String(c ?? '').trim());
       if (!cells.some(Boolean)) return;
-      const item = rowToStructuredItem(cells, ctx.mapping, R);
+      const item = rowToStructuredItem(cells, ctx.mapping, R, options);
       if (!item) return;
       validRowCount++;
       if (previewRows.length < 5) {
@@ -564,15 +606,17 @@
   }
 
   function columnStats(samples) {
+    const R = global.KVTextRules;
     const values = samples.map(v => String(v ?? '').trim()).filter(Boolean);
-    if (!values.length) return { count: 0, avgLen: 0, idRatio: 1, questionRatio: 0, answerRatio: 0 };
+    if (!values.length) return { count: 0, avgLen: 0, idRatio: 1, questionRatio: 0, answerRatio: 0, categoryQuality: 0 };
     const avgLen = values.reduce((n, v) => n + v.length, 0) / values.length;
     const idRatio = values.filter(isSnowflakeId).length / values.length;
     const questionRatio = values.filter(v =>
       isValidQuestion(v) && (/[？?]/.test(v) || /^(如何|怎么|什么|哪些|是否|能否|可以|多少|为什么|哪里|哪个|请问)/.test(v))
     ).length / values.length;
     const answerRatio = values.filter(v => isValidAnswer(v) && v.length >= 8).length / values.length;
-    return { count: values.length, avgLen, idRatio, questionRatio, answerRatio };
+    const categoryQuality = values.filter(v => R.isReadableCategoryValue(v)).length / values.length;
+    return { count: values.length, avgLen, idRatio, questionRatio, answerRatio, categoryQuality };
   }
 
   function inferColumnsByContent(rows) {
@@ -589,7 +633,7 @@
         stats,
         questionScore: stats.questionRatio * 3 + (stats.avgLen > 4 && stats.avgLen < 120 ? 1 : 0) - stats.idRatio * 4,
         answerScore: stats.answerRatio * 3 + Math.min(stats.avgLen / 40, 2) - stats.idRatio * 5,
-        categoryScore: (stats.avgLen > 1 && stats.avgLen < 30 ? 1.5 : 0) + (stats.idRatio < 0.2 ? 0.5 : -2) - stats.questionRatio
+        categoryScore: stats.categoryQuality * 5 + (stats.avgLen > 1 && stats.avgLen < 20 ? 1 : 0) + (stats.idRatio < 0.2 ? 0.5 : -2) - stats.questionRatio - (stats.categoryQuality < 0.2 ? 3 : 0)
       });
     }
 
@@ -608,7 +652,7 @@
     }
 
     const categoryCols = byCategory
-      .filter(s => s.col !== question && s.col !== answer && s.stats.idRatio < 0.2 && s.categoryScore > 0)
+      .filter(s => s.col !== question && s.col !== answer && s.stats.idRatio < 0.2 && s.stats.categoryQuality >= 0.3 && s.categoryScore > 0)
       .slice(0, 3)
       .map(s => s.col)
       .sort((a, b) => a - b);
@@ -643,7 +687,7 @@
     ctx.dataRows.forEach(row => {
       const cells = (row || []).map(c => String(c ?? '').trim());
       if (!cells.some(Boolean)) return;
-      const item = rowToStructuredItem(cells, ctx.mapping, R);
+      const item = rowToStructuredItem(cells, ctx.mapping, R, options);
       if (item) blocks.push(item);
     });
 

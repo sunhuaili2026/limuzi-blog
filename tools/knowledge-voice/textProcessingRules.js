@@ -265,8 +265,99 @@
     return m ? m[1] : null;
   }
 
+  const CATEGORY_SLUG_MAP = {
+    activity: '营销活动', supervisor: '门店监督', product: '产品咨询', member: '会员服务',
+    ncoin: 'N币', app: 'APP功能', community: '社区圈子', range: '产品参数',
+    standard: '标准版', colors: '外观配色', service: '售后服务', warranty: '保修政策',
+    faq: '常见问题', support: '售后支持', sales: '售前咨询', marketing: '营销活动',
+    ebike: 'E-bike', 'e-bike': 'E-bike', electric: '电动车', vehicle: '整车',
+    battery: '电池', charger: '充电器', firmware: '固件升级', software: '软件功能'
+  };
+
+  function isTechnicalPathValue(value) {
+    const s = String(value ?? '').trim();
+    if (!s) return true;
+    if (/^https?:\/\//i.test(s)) return true;
+    if (/^[a-f0-9-]{32,}$/i.test(s)) return true;
+    if (/\.(jpg|jpeg|png|gif|pdf|doc|xlsx|csv|zip)$/i.test(s)) return true;
+    if (/^\/[a-z0-9_\-/\\]+$/i.test(s)) return true;
+    if (/^[a-z0-9_\-]+(\/[a-z0-9_\-]+)+$/i.test(s) && !/[\u4e00-\u9fa5]/.test(s)) return true;
+    return false;
+  }
+
+  function isReadableCategoryValue(value) {
+    const s = String(value ?? '').trim();
+    if (!s || isTechnicalPathValue(s)) return false;
+    if (/^[\d\s./\\_-]+$/.test(s)) return false;
+    if (/[\u4e00-\u9fa5]/.test(s)) return s.length <= 24;
+    return /^[A-Za-z][A-Za-z0-9\-]{0,14}$/.test(s);
+  }
+
+  function translateCategorySegment(part) {
+    const raw = String(part ?? '').trim();
+    if (!raw) return '';
+    if (/[\u4e00-\u9fa5]/.test(raw)) return raw.replace(/^\*+/, '');
+    const key = raw.toLowerCase().replace(/[^a-z0-9\-]/g, '');
+    return CATEGORY_SLUG_MAP[key] || CATEGORY_SLUG_MAP[raw.toLowerCase()] || '';
+  }
+
+  function extractCategoryFromQuestion(question) {
+    const q = String(question ?? '').trim();
+    const pipe = q.match(/\|\s*([^|？?]{1,20})$/);
+    if (pipe) return pipe[1].trim();
+    const tags = [
+      ['门店监督|监督官', '门店监督'],
+      ['N币|n币', 'N币'],
+      ['APP|app|圈子', 'APP功能'],
+      ['续航|里程', '产品参数'],
+      ['颜色|配色|外观', '外观配色'],
+      ['保修|质保', '售后服务'],
+      ['活动', '营销活动'],
+      ['E-bike|e-bike', 'E-bike'],
+      ['九号电动|电动车', '九号电动']
+    ];
+    for (const [pattern, label] of tags) {
+      if (new RegExp(pattern, 'i').test(q)) return label;
+    }
+    return '';
+  }
+
+  function normalizeCategorySegments(path) {
+    const parts = String(path ?? '')
+      .split(/[/>\\|]/)
+      .map(p => p.trim())
+      .filter(Boolean);
+    const translated = parts.map(p => translateCategorySegment(p) || (/[\u4e00-\u9fa5]/.test(p) ? p : '')).filter(Boolean);
+    return [...new Set(translated)];
+  }
+
+  function buildReadableCategory(rawCategory, question, companyName) {
+    const fromCells = normalizeCategorySegments(rawCategory);
+    const fromQuestion = extractCategoryFromQuestion(question);
+    const parts = [];
+
+    if (fromCells.length && fromCells.some(p => /[\u4e00-\u9fa5]/.test(p))) {
+      parts.push(...fromCells.filter(p => /[\u4e00-\u9fa5]/.test(p)));
+    } else if (fromCells.length) {
+      parts.push(...fromCells);
+    }
+
+    if (fromQuestion && !parts.includes(fromQuestion)) {
+      parts.push(fromQuestion);
+    }
+
+    if (!parts.length && companyName) {
+      parts.push(companyName.replace(/公司|品牌/g, '').trim() || companyName, '通用');
+    } else if (!parts.length) {
+      parts.push('通用');
+    }
+
+    return parts.slice(0, 3).join('/');
+  }
+
   function ensureCategoryPath(path, prefix, depth) {
-    let result = (path || '通用知识').replace(/\s+/g, '');
+    const normalized = buildReadableCategory(path, '', '');
+    let result = normalized.replace(/\s+/g, '');
     if (prefix && !result.startsWith(prefix.replace(/\/$/, ''))) {
       result = prefix.replace(/\/$/, '') + '/' + result;
     }
@@ -367,6 +458,12 @@
     isCategoryTagOnly,
     stripCategoryTagsFromAnswer,
     extractCategoryTag,
+    isTechnicalPathValue,
+    isReadableCategoryValue,
+    extractCategoryFromQuestion,
+    buildReadableCategory,
+    normalizeCategorySegments,
+    translateCategorySegment,
     preprocessText,
     applyLayer1ToEntry,
     chunkText,

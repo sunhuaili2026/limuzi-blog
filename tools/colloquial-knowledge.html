@@ -400,7 +400,7 @@
                                 <select id="colAnswer"></select>
                             </div>
                             <div class="kv-field">
-                                <label for="colCategory1">目录列 1</label>
+                                <label for="colCategory1">目录列 1 <span style="font-weight:400;color:var(--text-secondary)">选 category_name/品类</span></label>
                                 <select id="colCategory1"></select>
                             </div>
                             <div class="kv-field">
@@ -493,11 +493,11 @@
     </footer>
 
     <script src="../script.js"></script>
-    <script src="/tools/knowledge-voice/textProcessingRules.js?v=6"></script>
-    <script src="/tools/knowledge-voice/localKnowledgeEngine.js?v=6"></script>
-    <script src="/tools/knowledge-voice/knowledgeTransformPrompts.js?v=6"></script>
-    <script src="/tools/knowledge-voice/platformExport.js?v=6"></script>
-    <script src="/tools/knowledge-voice/knowledgeTransform.js?v=6"></script>
+    <script src="/tools/knowledge-voice/textProcessingRules.js?v=7"></script>
+    <script src="/tools/knowledge-voice/localKnowledgeEngine.js?v=7"></script>
+    <script src="/tools/knowledge-voice/knowledgeTransformPrompts.js?v=7"></script>
+    <script src="/tools/knowledge-voice/platformExport.js?v=7"></script>
+    <script src="/tools/knowledge-voice/knowledgeTransform.js?v=7"></script>
     <script>
         function assertKVModules() {
             const missing = [];
@@ -527,6 +527,14 @@
 
         function isStructuredFile(name) {
             return /\.(csv|xlsx|xls)$/i.test(name || '');
+        }
+
+        function getParseOptions() {
+            const companyName = document.getElementById('companyName').value.trim();
+            const mapping = getColumnMappingFromUI();
+            const opts = { companyName };
+            if (mapping) opts.columnMapping = mapping;
+            return opts;
         }
 
         function getColumnMappingFromUI() {
@@ -567,7 +575,7 @@
             document.getElementById('colCategory3').innerHTML = noneOption + buildColumnOptions(cols, mapping.categories?.[2] ?? -1);
 
             document.getElementById('mappingHint').textContent =
-                `${MAPPING_SOURCE_LABEL[analysis.mappingSource] || '自动识别'} · 有效 ${analysis.validRowCount}/${analysis.totalDataRows} 行`;
+                `${MAPPING_SOURCE_LABEL[analysis.mappingSource] || '自动识别'} · 有效 ${analysis.validRowCount}/${analysis.totalDataRows} 行 · 目录优先中文品类列，勿选 oss_path`;
 
             const preview = document.getElementById('mappingPreview');
             preview.innerHTML = (analysis.previewRows || []).map(row =>
@@ -577,8 +585,7 @@
 
         async function refreshFileParse() {
             if (!uploadedFile) return;
-            const mapping = getColumnMappingFromUI();
-            const parseOptions = mapping ? { columnMapping: mapping } : {};
+            const parseOptions = getParseOptions();
             if (isStructuredFile(uploadedFile.name)) {
                 fileAnalysis = await KVTransform.analyzeUploadedFile(uploadedFile, parseOptions);
                 renderColumnMappingPanel(fileAnalysis);
@@ -626,9 +633,7 @@
         async function resolveInputText() {
             if (uploadedFile) {
                 try {
-                    const mapping = getColumnMappingFromUI();
-                    const options = mapping ? { columnMapping: mapping } : {};
-                    uploadedText = await KVTransform.parseUploadedFile(uploadedFile, options);
+                    uploadedText = await KVTransform.parseUploadedFile(uploadedFile, getParseOptions());
                     return uploadedText;
                 } catch (err) {
                     throw new Error('文件解析失败：' + err.message);

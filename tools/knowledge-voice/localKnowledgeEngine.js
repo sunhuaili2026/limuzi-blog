@@ -52,7 +52,9 @@
         i++;
         while (i < lines.length) {
           const next = lines[i].trim();
-          if (!next || /^(\d+)[.、.)]/.test(next) || /^【/.test(next) || /^问[：:]/.test(next)) break;
+          if (!next) { i++; continue; }
+          if (/^(\d+)[.、.)]/.test(next) || /^问[：:]/.test(next)) break;
+          if (R.isCategoryTagOnly(next)) { i++; continue; }
           answerParts.push(next);
           i++;
         }
@@ -67,10 +69,13 @@
         i++;
         while (i < lines.length) {
           const next = lines[i].trim();
-          if (!next || /[？?]$/.test(next) && next.length < 80 || /^(\d+)[.、.)]/.test(next)) break;
+          if (!next) { i++; continue; }
+          if (/^【/.test(next) && R.isCategoryTagOnly(next)) { i++; continue; }
+          if (/[？?]$/.test(next) && next.length < 80 && answerParts.length > 0) break;
+          if (/^(\d+)[.、.)]/.test(next)) break;
           answerParts.push(next);
           i++;
-          if (answerParts.join('').length > 500) break;
+          if (answerParts.join('').length > 2000) break;
         }
         if (answerParts.length) pushFinding(findings, currentCat, line, answerParts.join(''), config);
         continue;
@@ -96,14 +101,18 @@
 
   function pushFinding(list, category, question, answer, config) {
     const q = R.normalizePunctuation(question);
-    const a = R.normalizePunctuation(answer);
+    let a = R.normalizePunctuation(answer);
+    const intentTag = R.extractCategoryTag(a) || R.extractCategoryTag(q);
+    a = R.stripCategoryTagsFromAnswer(a);
     if (!q || !a || q.length < 2 || a.length < 1) return;
+    if (R.isCategoryTagOnly(a)) return;
     if (/^第\s*\d+\s*页$/.test(q) || /^目录$/.test(q)) return;
 
     list.push({
       category,
       question: ensureQuestion(q),
       answer: a,
+      intentTag,
       keywords: extractKeywords(q + a),
       sourceExcerpt: a.slice(0, 200),
       isComplex: R.detectSensitive(q + a)

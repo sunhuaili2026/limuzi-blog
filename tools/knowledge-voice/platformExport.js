@@ -45,13 +45,23 @@
 
     const qaDataRows = [];
     result.entries.forEach(entry => {
-      const turns = entry.answerTurns?.length ? entry.answerTurns : [''];
+      const R = global.KVTextRules;
+      let turns = (entry.answerTurns?.length ? entry.answerTurns : [''])
+        .map(t => R ? R.stripCategoryTagsFromAnswer(t) : t)
+        .filter(t => t && !(R && R.isCategoryTagOnly(t)));
+      if (!turns.length) turns = [''];
+
+      let summary = entry.summary || '';
+      if (R && R.isCategoryTagOnly(summary)) {
+        summary = R.stripCategoryTagsFromAnswer(turns[0] || '').slice(0, 50);
+      }
+
       turns.forEach((turn, idx) => {
         qaDataRows.push([
           entry.categoryPath,
           entry.standardQuestion,
           idx === 0 ? '纯文本' : '',
-          idx === 0 ? (entry.summary || '').slice(0, 50) : '',
+          idx === 0 ? summary.slice(0, 50) : '',
           idx === 0 ? '纯文本' : '',
           turn,
           '',

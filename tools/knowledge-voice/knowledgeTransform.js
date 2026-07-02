@@ -284,14 +284,51 @@
       const wb = XLSX.read(data, { type: 'array' });
       const sheet = wb.Sheets['问答知识'] || wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const dataRows = rows.slice(3);
-      return dataRows.map(row => {
-        const [cat, q, , summary, , answer] = row;
-        if (!q && !answer) return '';
-        return `【${cat || '通用'}】\n问：${q}\n答：${answer || summary}`;
-      }).filter(Boolean).join('\n\n');
+      return parsePlatformXlsxRows(rows);
     }
     throw new Error('不支持的文件格式，请上传 .txt / .md / .csv / .xlsx');
+  }
+
+  /** 解析平台 xlsx：合并多行答案，不把分类标签当答案 */
+  function parsePlatformXlsxRows(rows) {
+    const R = global.KVTextRules;
+    const dataRows = rows.slice(3);
+    const blocks = [];
+    let current = null;
+
+    dataRows.forEach(row => {
+      const cat = String(row[0] || '').trim();
+      const q = String(row[1] || '').trim();
+      const summary = String(row[3] || '').trim();
+      const answer = String(row[5] || '').trim();
+
+      if (q) {
+        if (current) blocks.push(current);
+        current = { cat, q, summary, answers: [] };
+      }
+      if (!current) return;
+
+      if (cat && !current.cat) current.cat = cat;
+      if (summary && !current.summary) current.summary = summary;
+
+      if (answer && !R.isCategoryTagOnly(answer)) {
+        current.answers.push(answer);
+      }
+    });
+    if (current) blocks.push(current);
+
+    return blocks.map(b => {
+      let fullAnswer = b.answers.join('').trim();
+      fullAnswer = R.stripCategoryTagsFromAnswer(fullAnswer);
+      if (!fullAnswer && b.summary && !R.isCategoryTagOnly(b.summary)) {
+        fullAnswer = R.stripCategoryTagsFromAnswer(b.summary);
+      }
+      if (!fullAnswer) return '';
+      const tag = b.answers.find(a => R.isCategoryTagOnly(a)) || R.extractCategoryTag(b.summary);
+      let text = `【${b.cat || '通用'}】\n问：${b.q}\n答：${fullAnswer}`;
+      if (tag) text += `\n分类：${tag}`;
+      return text;
+    }).filter(Boolean).join('\n\n');
   }
 
   global.KVTransform = {

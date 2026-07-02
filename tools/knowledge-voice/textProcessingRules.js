@@ -103,6 +103,31 @@
     return SENSITIVE_KEYWORDS.some(kw => text.includes(kw));
   }
 
+  /** 是否为纯分类标签行，如 【产品咨询】或 【产品咨询】。 */
+  function isCategoryTagOnly(text) {
+    return /^【[^】]{1,20}】[。．.]?\s*$/.test((text || '').trim());
+  }
+
+  /** 剥离答案开头的分类标签，保留真实播报内容 */
+  function stripCategoryTagsFromAnswer(text) {
+    if (!text) return '';
+    let result = text.trim();
+    // 逐行去掉开头的纯标签行
+    const lines = result.split('\n');
+    while (lines.length && isCategoryTagOnly(lines[0])) {
+      lines.shift();
+    }
+    result = lines.join('\n').trim();
+    // 去掉行内开头的标签前缀
+    result = result.replace(/^【[^】]{1,20}】[。．.]?\s*/g, '').trim();
+    return result;
+  }
+
+  function extractCategoryTag(text) {
+    const m = (text || '').trim().match(/^【([^】]+)】/);
+    return m ? m[1] : null;
+  }
+
   function ensureCategoryPath(path, prefix, depth) {
     let result = (path || '通用知识').replace(/\s+/g, '');
     if (prefix && !result.startsWith(prefix.replace(/\/$/, ''))) {
@@ -127,18 +152,35 @@
     const maxTurns = config.maxAnswerTurns || 5;
     let answer = stripHtml(entry.answer || '');
     answer = normalizePunctuation(answer);
+    answer = stripCategoryTagsFromAnswer(answer);
     answer = oralizeNumbers(answer);
 
     const standardQuestion = normalizePunctuation(entry.question || entry.standardQuestion || '').slice(0, 200);
+    const intentTag = entry.intentTag || extractCategoryTag(entry.answer || entry.summary || '');
+
+    if (!answer || isCategoryTagOnly(answer)) {
+      const fallback = stripCategoryTagsFromAnswer(stripHtml(entry.sourceExcerpt || ''));
+      if (fallback && !isCategoryTagOnly(fallback)) answer = fallback;
+    }
+
     const answerTurns = splitAnswerTurns(answer, maxLen, maxTurns);
     const needsHuman = detectSensitive(standardQuestion + answer);
+
+    let summary = entry.summary || '';
+    if (!summary || isCategoryTagOnly(summary)) {
+      summary = truncateAtSentence(answerTurns[0] || '', 50);
+    }
+    summary = stripCategoryTagsFromAnswer(summary).slice(0, 50);
+
+    const keywords = [...(entry.keywords || [])];
+    if (intentTag && !keywords.includes(intentTag)) keywords.unshift(intentTag);
 
     return {
       categoryPath: ensureCategoryPath(entry.categoryPath || entry.category, config.categoryPrefix, config.categoryDepth || 2),
       standardQuestion,
-      summary: (entry.summary || truncateAtSentence(answerTurns[0], 50)).slice(0, 50),
+      summary,
       answerTurns,
-      keywords: entry.keywords || [],
+      keywords,
       needsHuman,
       transferReason: needsHuman ? '含敏感/合规关键词，建议人工审核' : null,
       sourceExcerpt: (entry.sourceExcerpt || answer).slice(0, 200),
@@ -171,6 +213,9 @@
     splitAnswerTurns,
     detectSensitive,
     ensureCategoryPath,
+    isCategoryTagOnly,
+    stripCategoryTagsFromAnswer,
+    extractCategoryTag,
     preprocessText,
     applyLayer1ToEntry,
     chunkText,

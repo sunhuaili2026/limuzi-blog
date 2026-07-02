@@ -47,9 +47,13 @@ jobs:
               echo "Backup: $BACKUP_DIR"
             fi
             cd "$WEB_ROOT"
-            sudo git fetch origin main
-            sudo git reset --hard origin/main
-            echo "Deployed: $(git log -1 --oneline)"
+            for i in 1 2 3; do
+              sudo git fetch origin main && break
+              echo "git fetch retry $i..."
+              sleep 5
+            done
+            sudo git reset --hard origin/main || true
+            echo "Deployed: $(git log -1 --oneline 2>/dev/null || echo 'git log failed')"
             # 恢复 git 仓库外的工具（如 SmartCS），避免自动部署覆盖
             if [ ! -d "$WEB_ROOT/tools/smartcs-coldstart" ] || [ -z "$(sudo ls -A "$WEB_ROOT/tools/smartcs-coldstart" 2>/dev/null)" ]; then
               echo "SmartCS missing, searching backups..."

@@ -1,0 +1,56 @@
+name: Restore SmartCS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/restore-smartcs.yml'
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore SmartCS from server backup
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: false
+          command_timeout: 5m
+          script: |
+            WEB_ROOT="/var/www/html"
+            echo "=== Current tools ==="
+            sudo ls -la "$WEB_ROOT/tools/" 2>/dev/null || echo "no tools dir"
+            echo "=== Available backups ==="
+            sudo ls -lt /var/www/backup/ 2>/dev/null | head -10
+            restored=0
+            for b in $(sudo ls -t /var/www/backup/ 2>/dev/null); do
+              if [ -d "/var/www/backup/$b/tools/smartcs-coldstart" ] && [ "$(sudo ls -A /var/www/backup/$b/tools/smartcs-coldstart 2>/dev/null)" ]; then
+                sudo mkdir -p "$WEB_ROOT/tools"
+                sudo rm -rf "$WEB_ROOT/tools/smartcs-coldstart"
+                sudo cp -r "/var/www/backup/$b/tools/smartcs-coldstart" "$WEB_ROOT/tools/"
+                sudo chown -R www-data:www-data "$WEB_ROOT/tools/smartcs-coldstart" 2>/dev/null || true
+                echo "✅ Restored smartcs-coldstart from backup $b"
+                restored=1
+                break
+              fi
+              if [ -d "/var/www/backup/$b/tools/smartcs-v3" ] && [ "$(sudo ls -A /var/www/backup/$b/tools/smartcs-v3 2>/dev/null)" ]; then
+                sudo mkdir -p "$WEB_ROOT/tools/smartcs-coldstart"
+                sudo cp -r "/var/www/backup/$b/tools/smartcs-v3/." "$WEB_ROOT/tools/smartcs-coldstart/"
+                sudo chown -R www-data:www-data "$WEB_ROOT/tools/smartcs-coldstart" 2>/dev/null || true
+                echo "✅ Restored smartcs-v3 as smartcs-coldstart from backup $b"
+                restored=1
+                break
+              fi
+            done
+            if [ "$restored" -eq 0 ]; then
+              echo "❌ No SmartCS found in any backup"
+              echo "Searching entire backup tree..."
+              sudo find /var/www/backup -maxdepth 4 -type d \( -name 'smartcs-coldstart' -o -name 'smartcs-v3' \) 2>/dev/null
+            fi
+            echo "=== After restore ==="
+            sudo ls -la "$WEB_ROOT/tools/smartcs-coldstart/" 2>/dev/null | head -10 || echo "still missing"

@@ -23,12 +23,13 @@
     const defaultCat = inferCategory(text, config);
 
     // 模式 1：问： / 答： 成对（不在答案内的编号列表处截断）
-    const qaBlockRe = /(?:^|\n)\s*问[：:]\s*(.+?)\s*\n\s*答[：:]\s*([\s\S]*?)(?=\n\s*问[：:]|\n【[^】]+】\s*\n|\n{2,}【|$)/g;
+    const qaBlockRe = /(?:^|\n)\s*(?:【([^】]+)】\s*\n)?\s*问[：:]\s*(.+?)\s*\n\s*答[：:]\s*([\s\S]*?)(?=\n\s*(?:【[^】]+】\s*\n\s*)?问[：:]|\n{2,}【|$)/g;
     let m;
     while ((m = qaBlockRe.exec(text)) !== null) {
-      const q = m[1].trim();
-      const a = m[2].trim();
-      if (q && a) pushFinding(findings, defaultCat, q, a, config);
+      const cat = (m[1] || defaultCat).replace(/\|.*$/, '').trim();
+      const q = m[2].trim();
+      const a = m[3].trim();
+      if (q && a) pushFinding(findings, cat, q, a, config);
     }
     if (findings.length) return expandFindings(findings, config);
 
@@ -182,6 +183,7 @@
     if (isFirstTurn && prefixReserve) {
       a = '您好，' + a.replace(/^[，,]/, '');
     }
+    a = a.replace(/[，,]+。$/g, '。').replace(/[，,]$/g, '');
     if (!/[。！？?]$/.test(a)) a += '。';
     return R.enforceTurnLength(a, maxLen, 0);
   }

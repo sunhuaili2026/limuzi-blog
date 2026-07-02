@@ -156,7 +156,9 @@
     /敬请(?:谅解|理解|留意|关注)[，,。!！\s]*/g,
     /祝您(?:生活|工作)?愉快[，,。!！\s]*/g,
     /如您(?:还)?(?:有|存在)(?:任何)?疑问[^。；]*[。；]?/g,
-    /欢迎(?:您)?(?:随时)?(?:联系|咨询)(?:我们|客服)[^。；]*[。；]?/g
+    /欢迎(?:您)?(?:随时)?(?:联系|咨询)(?:我们|客服)[^。；]*[。；]?/g,
+    /我们将竭诚为您服务[^。；]*[。；]?/g,
+    /工程师将评估[^。；]*[。；]?/g
   ];
 
   /** 去掉法务套话、冗余声明 */
@@ -183,7 +185,94 @@
     if (/功能|是什么|什么意思|干嘛|做什么/.test(q)) extras.push('功能', '介绍');
     if (/怎么|如何|怎样/.test(q)) extras.push('操作', '步骤');
     if (/绑定|解绑|注册|登录|注销|退出/.test(q)) extras.push('绑定', '注册', '登录', '注销');
+    if (/\d+\s*号\s*报警|报警码|故障码/.test(q)) extras.push('报警', '故障', '报修', '工程师');
     return [...new Set([...words, ...extras])].slice(0, 10);
+  }
+
+  function isAlarmQuestion(question) {
+    return /\d+\s*号\s*报警|报警码|故障代码|故障码/.test(String(question ?? ''));
+  }
+
+  function stripFaultDocLabels(text) {
+    return String(text ?? '')
+      .replace(/【问题表现】|【解决方案】|【处理建议】|【故障说明】/g, ' ')
+      .replace(/(?:^|\s)(?:问题表现|解决方案|处理建议|故障说明)[：:]\s*/g, ' ')
+      .replace(/\s+解决方案\s+/g, ' ')
+      .replace(/仪表盘显示(?:第)?[\d一二三四五六七八九十]+号故障代码?[，,]?\s*/g, '')
+      .replace(/该问题需要专业工程师处理[，,。]?\s*/g, '')
+      .replace(/\b\d{10,}\b/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  /** 报警码答案里的 App 操作 → 短句（语音机器人一次能听清） */
+  function compressAlarmAction(text) {
+    const s = String(text ?? '');
+    if (/一键报修/.test(s)) {
+      return '建议打开九号出行App，在服务页或设备页点一键报修';
+    }
+    if (/附近门店|服务店|查.*门店|支持维修/.test(s)) {
+      return '您可以在九号出行App服务页或设备页查附近维修门店';
+    }
+    return oralizeAppNavigation(oralizeFormalPhrases(s))
+      .replace(/^请/, '')
+      .replace(/工程师将评估[^，,。；]*/g, '')
+      .replace(/填写[^，,。；]{4,20}故障信息/g, '填写故障信息')
+      .trim();
+  }
+
+  function isAlreadyVoiceifiedAlarm(text) {
+    const s = String(text ?? '').trim();
+    return /^一般是[^，,]+，(?:需要工程师|建议打开|您可以在)/.test(s)
+      || /^建议打开九号出行App/.test(s)
+      || /^您可以在九号出行App服务页/.test(s)
+      || /^需要工程师处理，建议您在九号出行App/.test(s);
+  }
+
+  /** 故障/报警码 FAQ → 语音机器人可执行话术 */
+  function voiceifyAlarmAnswer(question, answer, maxLen) {
+    const raw = String(answer ?? '');
+    if (isAlreadyVoiceifiedAlarm(raw)) {
+      return enforceTurnLength(raw, maxLen, 0);
+    }
+    let t = stripFaultDocLabels(stripUrlsAndTechnical(stripHtml(raw)));
+    t = stripFormalOpenings(stripBoilerplate(t));
+    t = stripDocFieldLabels(t);
+
+    const symptoms = [];
+    const symMatch = t.match(/无助力|无法骑行|无法启动|不能骑行|助力失效|无法充电|漏液|异响|失控|断电/);
+    if (symMatch) symptoms.push(symMatch[0]);
+
+    const actionClauses = splitIntoClauses(t)
+      .filter(s => /打开|点|找到|填写|预约|报修|门店|服务页|设备页/.test(s))
+      .filter(s => !/^无助力|一般是|仪表盘/.test(s.trim()))
+      .sort((a, b) => {
+        const score = (s) => (/一键报修/.test(s) ? 12 : 0) + (/打开/.test(s) ? 6 : 0) + (/服务页|设备页/.test(s) ? 4 : 0) - s.length * 0.01;
+        return score(b) - score(a);
+      });
+
+    const parts = [];
+    if (symptoms.length) parts.push('一般是' + symptoms[0]);
+
+    if (actionClauses.length) {
+      parts.push(compressAlarmAction(actionClauses[0]));
+    } else if (/一键报修/.test(t)) {
+      parts.push('建议打开九号出行App，在服务页或设备页点一键报修');
+    } else if (/专业工程师|工程师处理|工程师/.test(raw)) {
+      parts.push('需要工程师处理，建议您在九号出行App服务页点一键报修');
+    } else if (/附近门店|服务店|维修/.test(t)) {
+      parts.push('您可以在九号出行App服务页或设备页查附近维修门店');
+    }
+
+    if (!parts.length) {
+      t = t.replace(/仪表盘显示[^，,。；]{4,24}[，,]?/g, '');
+      return enforceTurnLength(oralizeFormalPhrases(oralizeAppNavigation(t)), maxLen, 0);
+    }
+
+    let result = parts.slice(0, 2).join('，');
+    result = result.replace(/(一般是[^，,]+，)\1+/g, '$1');
+    if (!/[。！？?]$/.test(result)) result += '。';
+    return enforceTurnLength(result, maxLen, 0);
   }
 
   function hasDocumentStructure(text) {
@@ -309,6 +398,9 @@
 
   /** 最终润色：一条答案只讲一件事，像客服在电话里说 */
   function polishVoiceAnswer(text, question, maxLen) {
+    if (isAlarmQuestion(question)) {
+      return voiceifyAlarmAnswer(question, text, maxLen);
+    }
     let t = pickSectionForQuestion(text, question);
     t = stripUrlsAndTechnical(t);
     t = stripSectionHeaders(t);
@@ -346,7 +438,8 @@
       else if (kw.length >= 3 && s.includes(kw.slice(0, 2))) score += 4;
     });
     if (/背景|旨在|目的|意义/.test(s) && !/参与|获得|可以|申请|办理/.test(s)) score -= 6;
-    if (/^\d+[\u4e00-\u9fa5]{0,4}[：:]/.test(s)) score += 2;
+    if (/打开|点|报修|门店|服务页|工程师|预约|填写/.test(s)) score += 8;
+    if (/仪表盘显示|解决方案|问题表现|故障代码/.test(s)) score -= 10;
     return score;
   }
 
@@ -770,6 +863,9 @@
     oralizeHashtags,
     stripDocFieldLabels,
     hasTechnicalNoise,
+    isAlarmQuestion,
+    voiceifyAlarmAnswer,
+    stripFaultDocLabels,
     normalizePunctuation,
     oralizeNumbers,
     oralizeDocumentStructure,

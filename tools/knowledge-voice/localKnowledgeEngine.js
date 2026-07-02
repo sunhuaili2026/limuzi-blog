@@ -206,11 +206,7 @@
     a = a.replace(/^[！!，,\s]+/, '').replace(/^您好[，,!\s]*您好/u, '');
     if (!a || /^[！!，,\s]+$/.test(a)) return '';
     a = R.oralizeFormalPhrases(a);
-    a = R.polishVoiceAnswer(a, question || '', maxLen - (isFirstTurn ? 3 : 0));
-    const prefixReserve = isFirstTurn && a.length > 8 ? 3 : 0;
-    if (isFirstTurn && prefixReserve && !/^(您好|你好)/.test(a)) {
-      a = '您好，' + a.replace(/^[，,]/, '');
-    }
+    a = R.polishVoiceAnswer(a, question || '', maxLen);
     a = a.replace(/[，,]+。$/g, '。').replace(/[，,]$/g, '');
     if (!/[。！？?]$/.test(a)) a += '。';
     return R.enforceTurnLength(a, maxLen, 0);

@@ -22,8 +22,8 @@
     const findings = [];
     const defaultCat = inferCategory(text, config);
 
-    // 模式 1：问： / 答： 成对
-    const qaBlockRe = /(?:^|\n)\s*问[：:]\s*(.+?)\s*\n\s*答[：:]\s*([\s\S]*?)(?=\n\s*问[：:]|\n\s*\d+[.、)]|\n【|$)/g;
+    // 模式 1：问： / 答： 成对（不在答案内的编号列表处截断）
+    const qaBlockRe = /(?:^|\n)\s*问[：:]\s*(.+?)\s*\n\s*答[：:]\s*([\s\S]*?)(?=\n\s*问[：:]|\n【[^】]+】\s*\n|\n{2,}【|$)/g;
     let m;
     while ((m = qaBlockRe.exec(text)) !== null) {
       const q = m[1].trim();
@@ -100,8 +100,8 @@
   }
 
   function pushFinding(list, category, question, answer, config) {
-    const q = R.normalizePunctuation(question);
-    let a = R.normalizePunctuation(answer);
+    const q = question.trim();
+    let a = answer.trim();
     const intentTag = R.extractCategoryTag(a) || R.extractCategoryTag(q);
     a = R.stripCategoryTagsFromAnswer(a);
     if (!q || !a || q.length < 2 || a.length < 1) return;
@@ -164,7 +164,7 @@
         sourceExcerpt: f.sourceExcerpt
       }, config);
 
-      entry.answerTurns = entry.answerTurns.map(oralizeAnswerTone);
+      entry.answerTurns = entry.answerTurns.map((turn, i) => oralizeAnswerTone(turn, i === 0));
       if (!entry.standardQuestion.match(/[？?]$/)) {
         entry.standardQuestion = ensureQuestion(entry.standardQuestion);
       }
@@ -172,12 +172,11 @@
     });
   }
 
-  function oralizeAnswerTone(answer) {
-    let a = answer.trim();
+  function oralizeAnswerTone(answer, isFirstTurn) {
+    let a = (answer || '').trim();
     if (!a) return a;
-    a = a.replace(/该商品/g, '这款产品').replace(/上述/g, '').replace(/如下/g, '');
-    a = a.replace(/点击/g, '联系').replace(/查看/g, '了解').replace(/扫码/g, '操作');
-    if (!/^(您好|你好)/.test(a) && a.length > 15) {
+    a = R.oralizeFormalPhrases(a);
+    if (isFirstTurn && !/^(您好|你好)/.test(a) && a.length > 8) {
       a = '您好，' + a.replace(/^[，,]/, '');
     }
     if (!/[。！？?]$/.test(a)) a += '。';

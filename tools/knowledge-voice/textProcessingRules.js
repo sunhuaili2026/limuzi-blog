@@ -19,15 +19,74 @@
   }
 
   function normalizePunctuation(text) {
-    return text
+    let result = text
       .replace(/\|[^|\n]{1,20}$/gm, '')
-      .replace(/\|/g, '')
+      .replace(/\|/g, '');
+    // 保护小数，避免 1.5 → 1。5
+    result = result.replace(/(\d)\.(\d)/g, '$1\x00DEC$2');
+    result = result
       .replace(/,/g, '，')
       .replace(/\./g, '。')
       .replace(/:/g, '：')
       .replace(/;+/g, '；')
       .replace(/[ \t]+/g, ' ')
+      .replace(/(\d)\x00DEC(\d)/g, '$1.$2')
       .trim();
+    return result;
+  }
+
+  const ORDINAL_CN = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+
+  function ordinalLabel(n) {
+    if (n >= 1 && n <= 10) return `第${ORDINAL_CN[n]}`;
+    if (n >= 11 && n <= 99) return `第${n}`;
+    return `第${n}`;
+  }
+
+  /** 将文档式列表/章节标题转为可播报口语 */
+  function oralizeDocumentStructure(text) {
+    if (!text) return '';
+    let result = stripHtml(text);
+
+    // 无编号的章节小标题
+    result = result.replace(
+      /(?:^|\n)\s*(?:活动背景|活动规则|活动详情|活动内容|参与方式|适用条件|注意事项|温馨提示|申请条件|办理流程|所需材料)[：:：]?\s*/g,
+      ' '
+    );
+
+    // 编号列表 → 第一，第二，（含 "1. 活动背景" 这类）
+    result = result.replace(/(?:^|\n|\s)(\d{1,2})[.．、)）]\s*(?:活动背景|活动规则|活动详情|活动内容|参与方式|适用条件|注意事项|温馨提示|申请条件|办理流程|所需材料)?[：:：]?\s*/g, (_, num) => {
+      return ` ${ordinalLabel(+num)}，`;
+    });
+
+    // 无序列表符
+    result = result.replace(/[•·●○◆▪-]\s+/g, '，');
+
+    // 合并空白，去掉空行
+    result = result.replace(/\r/g, '')
+      .replace(/\n+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
+    return result;
+  }
+
+  /** 书面语 → 播报口语（Layer1 确定性改写） */
+  function oralizeFormalPhrases(text) {
+    return (text || '')
+      .replace(/该商品/g, '这款产品')
+      .replace(/上述/g, '')
+      .replace(/如下/g, '')
+      .replace(/详见/g, '您可以了解')
+      .replace(/点击/g, '联系')
+      .replace(/查看/g, '了解')
+      .replace(/扫码/g, '操作')
+      .replace(/登录/g, '进入')
+      .replace(/官方网站/g, '官网')
+      .replace(/温馨提示[：:，,]?/g, '')
+      .replace(/请注意[：:，,]?/g, '')
+      .replace(/也就是说[，,]?/g, '')
+      .replace(/[（(]详见[^）)]*[）)]/g, '');
   }
 
   const DIGITS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
@@ -141,21 +200,20 @@
   }
 
   function preprocessText(rawText, config) {
-    let text = stripHtml(rawText);
-    text = normalizePunctuation(text);
-    text = oralizeNumbers(text);
-    return text;
+    return stripHtml(rawText).replace(/\r/g, '').trim();
   }
 
   function applyLayer1ToEntry(entry, config) {
     const maxLen = config.maxAnswerLength || 120;
     const maxTurns = config.maxAnswerTurns || 5;
-    let answer = stripHtml(entry.answer || '');
+    let answer = oralizeDocumentStructure(entry.answer || '');
     answer = normalizePunctuation(answer);
     answer = stripCategoryTagsFromAnswer(answer);
+    answer = oralizeFormalPhrases(answer);
     answer = oralizeNumbers(answer);
 
-    const standardQuestion = normalizePunctuation(entry.question || entry.standardQuestion || '').slice(0, 200);
+    let standardQuestion = normalizePunctuation(entry.question || entry.standardQuestion || '');
+    standardQuestion = oralizeFormalPhrases(standardQuestion).slice(0, 200);
     const intentTag = entry.intentTag || extractCategoryTag(entry.answer || entry.summary || '');
 
     if (!answer || isCategoryTagOnly(answer)) {
@@ -208,6 +266,8 @@
     stripHtml,
     normalizePunctuation,
     oralizeNumbers,
+    oralizeDocumentStructure,
+    oralizeFormalPhrases,
     splitMultiEntity,
     truncateAtSentence,
     splitAnswerTurns,

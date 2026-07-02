@@ -671,18 +671,21 @@
 
             const tbody = document.getElementById('previewBody');
             tbody.innerHTML = result.entries.slice(0, 100).map(entry => {
-                const answer = (entry.answerTurns || []).join(' ');
-                const len = answer.length;
+                const turns = entry.answerTurns || [];
+                const firstTurn = turns[0] || '';
+                const len = firstTurn.length;
+                const maxLen = +document.getElementById('maxAnswerLength').value || 120;
                 let status = '<span class="kv-status-ok">✅</span>';
                 if (entry.conflict) status = '<span class="kv-status-warn">⚠️ 冲突</span>';
                 else if (entry.needsHuman) status = '<span class="kv-status-danger">⚠️ 人工</span>';
-                const turns = (entry.answerTurns || []).length;
-                const turnBadge = turns > 1 ? ` (${turns}轮)` : '';
+                else if (len > maxLen) status = '<span class="kv-status-warn">⚠️ 超长</span>';
+                const turnBadge = turns.length > 1 ? ` <span style="color:var(--text-secondary);font-size:11px;">(+${turns.length - 1}轮)</span>` : '';
+                const preview = firstTurn + (turns.length > 1 ? '…' : '');
                 return `<tr>
                     <td>${esc(entry.categoryPath)}</td>
                     <td>${esc(entry.standardQuestion)}</td>
-                    <td>${esc(answer)}${turnBadge}</td>
-                    <td>${len}字</td>
+                    <td title="${esc(turns.join('\n---\n'))}">${esc(preview)}${turnBadge}</td>
+                    <td>${len}字${turns.length > 1 ? '/轮' : ''}</td>
                     <td>${status}</td>
                 </tr>`;
             }).join('');

@@ -1,6 +1,6 @@
 /** 主流程编排 — 内置规则优先，LLM 可选增强 */
 (function (global) {
-  const { preprocessText, applyLayer1ToEntry, chunkText, ensureCategoryPath } = global.KVTextRules;
+  const { preprocessText, applyLayer1ToEntry, chunkText, ensureCategoryPath, stripHtml } = global.KVTextRules;
   const { buildExtractPrompt, buildVoiceifyPrompt, buildDedupPrompt, buildSimilarQuestionsPrompt } = global.KVPrompts;
 
   function getLocalEngine() {
@@ -94,75 +94,84 @@
   }
 
   async function phase2Voiceify(findings, config, onProgress) {
-    onProgress?.({ phase: 'voiceifying', message: '内置规则语音化改写中...' });
+    onProgress?.({ phase: 'voiceifying', message: '内置规则深度口语化中...' });
     let entries = getLocalEngine().localVoiceifyFindings(findings, config);
 
     if (!config.enableLLMEnhance) {
       onProgress?.({
         phase: 'voiceifying',
-        message: `内置规则语音化完成（${entries.length} 条）`
+        message: `内置深度口语化完成（${entries.length} 条）`
       });
       return entries;
     }
 
-    const complex = findings.filter((f, i) => getLocalEngine().needsLLMVoiceify({
-      ...f,
-      answerTurns: entries[i]?.answerTurns
-    }));
-
-    if (!complex.length) {
-      onProgress?.({ phase: 'voiceifying', message: `内置规则完成（${entries.length} 条，无符合 AI 增强条件的 HTML/长文条目）` });
+    const ranked = getLocalEngine().rankForLLM(findings, entries);
+    if (!ranked.length) {
+      onProgress?.({ phase: 'voiceifying', message: `内置规则完成（${entries.length} 条，质量已达标）` });
       return entries;
     }
 
-    const maxLlm = config.llmVoiceifyMaxEntries || 200;
-    const toProcess = complex.slice(0, maxLlm);
-    const llmSkipped = complex.length - toProcess.length;
+    const maxLlm = config.llmVoiceifyMaxEntries || 500;
+    const toProcess = ranked.slice(0, maxLlm);
+    const llmSkipped = ranked.length - toProcess.length;
 
     onProgress?.({
       phase: 'voiceifying',
-      message: `AI 大模型改写中 (${toProcess.length}/${complex.length} 条，请稍候)...`
+      message: `AI 大模型精修中 (${toProcess.length}/${ranked.length} 条，请稍候)...`
     });
 
-    const batchSize = 8;
+    const batchSize = 5;
     for (let i = 0; i < toProcess.length; i += batchSize) {
-      const batch = toProcess.slice(i, i + batchSize);
+      const batchItems = toProcess.slice(i, i + batchSize);
+      const batchPayload = batchItems.map(({ finding }) => ({
+        categoryPath: finding.categoryPath,
+        question: finding.question,
+        answer: stripHtml(finding.answer || '').slice(0, 1200),
+        keywords: finding.keywords,
+        sourceExcerpt: finding.sourceExcerpt
+      }));
+
       onProgress?.({
         phase: 'voiceifying',
-        message: `AI 大模型改写中 (${Math.min(i + batchSize, toProcess.length)}/${toProcess.length})...`
+        message: `AI 大模型精修中 (${Math.min(i + batchSize, toProcess.length)}/${toProcess.length})...`
       });
+
       try {
-        const prompt = buildVoiceifyPrompt(config, batch);
+        const prompt = buildVoiceifyPrompt(config, batchPayload);
         const content = await callLLM([{ role: 'user', content: prompt }]);
         const parsed = safeJsonParse(content);
-        (parsed.entries || []).forEach(e => {
-          const idx = entries.findIndex(x => x.standardQuestion === e.standardQuestion);
+        (parsed.entries || []).forEach((e, bi) => {
+          const targetIdx = batchItems[bi]?.index;
+          if (targetIdx == null || targetIdx < 0) return;
           const refined = applyLayer1ToEntry({
-            categoryPath: e.categoryPath,
-            question: e.standardQuestion,
+            categoryPath: e.categoryPath || findings[targetIdx].categoryPath,
+            question: e.standardQuestion || findings[targetIdx].question,
             answer: (e.answerTurns || []).join(''),
             summary: e.summary,
             keywords: e.keywords,
-            sourceExcerpt: e.sourceExcerpt
+            sourceExcerpt: e.sourceExcerpt,
+            hasHtml: false,
+            rawAnswerLength: (e.answerTurns || []).join('').length
           }, config);
-          const merged = {
+          entries[targetIdx] = {
             ...refined,
             standardQuestion: e.standardQuestion || refined.standardQuestion,
             summary: e.summary || refined.summary,
             answerTurns: e.answerTurns?.length ? e.answerTurns : refined.answerTurns,
-            needsHuman: e.needsHuman || refined.needsHuman
+            needsHuman: e.needsHuman || refined.needsHuman,
+            _llmRefined: true
           };
-          if (idx >= 0) entries[idx] = merged;
-          else entries.push(merged);
         });
       } catch (e) {
         console.warn('LLM voiceify batch failed', e);
       }
-      await sleep(400);
+      await sleep(500);
     }
 
     if (llmSkipped > 0) {
-      entries.llmMeta = { llmSkipped, llmProcessed: toProcess.length };
+      entries.llmMeta = { llmSkipped, llmProcessed: toProcess.length, llmCandidates: ranked.length };
+    } else {
+      entries.llmMeta = { llmSkipped: 0, llmProcessed: toProcess.length, llmCandidates: ranked.length };
     }
 
     return entries;
@@ -284,13 +293,18 @@
     if (llmMeta?.llmSkipped > 0) {
       warnings.push({
         type: 'llm_cap',
-        message: `AI 大模型已改写 ${llmMeta.llmProcessed} 条，另有 ${llmMeta.llmSkipped} 条仍用内置规则（单次上限 ${config.llmVoiceifyMaxEntries || 200} 条）。`
+        message: `AI 大模型已精修 ${llmMeta.llmProcessed} 条（优先处理质量最差的条目），另有 ${llmMeta.llmSkipped} 条仍用内置深度口语化（单次上限 ${config.llmVoiceifyMaxEntries || 500} 条）。`
+      });
+    } else if (llmMeta?.llmProcessed > 0) {
+      warnings.push({
+        type: 'llm_done',
+        message: `AI 大模型已精修 ${llmMeta.llmProcessed} 条质量待提升的条目。`
       });
     }
     if (!config.enableLLMEnhance) {
       warnings.push({
         type: 'builtin_only',
-        message: `本次使用内置规则处理 ${entries.length} 条（未调用大模型，耗时约 ${Math.round((Date.now() - start) / 1000)} 秒）。深度口语化请勾选「AI 增强」。`
+        message: `本次使用内置深度口语化处理 ${entries.length} 条（未调用大模型，耗时约 ${Math.round((Date.now() - start) / 1000)} 秒）。勾选「AI 增强」可对质量最差的条目再精修。`
       });
     }
 

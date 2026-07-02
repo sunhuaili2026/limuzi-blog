@@ -102,23 +102,26 @@
 
   function pushFinding(list, category, question, answer, config) {
     const q = question.trim();
-    let a = answer.trim();
+    const rawAnswer = answer.trim();
+    let a = R.stripCategoryTagsFromAnswer(rawAnswer);
     const intentTag = R.extractCategoryTag(a) || R.extractCategoryTag(q);
-    a = R.stripCategoryTagsFromAnswer(a);
     if (!q || !a || q.length < 2 || a.length < 1) return;
-    if (R.isCategoryTagOnly(a)) return;
+    if (R.isCategoryTagOnly(R.stripHtml(a))) return;
     if (/^第\s*\d+\s*页$/.test(q) || /^目录$/.test(q)) return;
+
+    const plainLen = R.plainTextLength(rawAnswer);
+    const hasHtml = /<[^>]+>/.test(rawAnswer);
 
     list.push({
       category,
       question: ensureQuestion(q),
-      answer: a,
+      answer: rawAnswer,
       intentTag,
-      keywords: extractKeywords(q + a),
-      sourceExcerpt: a.slice(0, 200),
-      isComplex: R.detectSensitive(q + a) || a.length > 600 || /<[^>]+>/.test(answer),
-      rawAnswerLength: a.length,
-      hasHtml: /<[^>]+>/.test(answer)
+      keywords: extractKeywords(q + R.stripHtml(rawAnswer)),
+      sourceExcerpt: R.stripHtml(rawAnswer).slice(0, 200),
+      isComplex: R.detectSensitive(q + R.stripHtml(rawAnswer)) || plainLen > 600 || hasHtml,
+      rawAnswerLength: plainLen,
+      hasHtml
     });
   }
 
@@ -152,11 +155,13 @@
       answer: f.answer,
       keywords: f.keywords,
       sourceExcerpt: f.sourceExcerpt,
-      isComplex: f.isComplex
+      isComplex: f.isComplex,
+      rawAnswerLength: f.rawAnswerLength || R.plainTextLength(f.answer),
+      hasHtml: f.hasHtml || /<[^>]+>/.test(f.answer || '')
     }));
   }
 
-  /** Phase 2 内置语音化 — Layer1 + 轻量口语模板 */
+  /** Phase 2 内置语音化 — Layer1 深度口语化 + 轻量语气模板 */
   function localVoiceifyFindings(findings, config) {
     return findings.map(f => {
       const entry = R.applyLayer1ToEntry({
@@ -164,10 +169,13 @@
         question: f.question,
         answer: f.answer,
         keywords: f.keywords,
-        sourceExcerpt: f.sourceExcerpt
+        sourceExcerpt: f.sourceExcerpt,
+        hasHtml: f.hasHtml,
+        rawAnswerLength: f.rawAnswerLength
       }, config);
 
       entry.answerTurns = entry.answerTurns.map((turn, i) => oralizeAnswerTone(turn, i === 0, config));
+      entry._voiceQuality = scoreVoiceQuality(entry, f, config);
       if (!entry.standardQuestion.match(/[？?]$/)) {
         entry.standardQuestion = ensureQuestion(entry.standardQuestion);
       }
@@ -175,10 +183,22 @@
     });
   }
 
+  function scoreVoiceQuality(entry, finding, config) {
+    const turn = (entry.answerTurns || [])[0] || '';
+    let score = 0;
+    if (R.isOverlyFormal(turn)) score += 30;
+    if ((finding.rawAnswerLength || 0) > 300) score += 15;
+    if (finding.hasHtml) score += 10;
+    if (turn.length > (config?.maxAnswerLength || 120)) score += 20;
+    if (/感谢|如下|上述|详见/.test(turn)) score += 15;
+    return score;
+  }
+
   function oralizeAnswerTone(answer, isFirstTurn, config) {
     const maxLen = config?.maxAnswerLength || 120;
     let a = R.stripFormalOpenings(answer || '');
-    if (!a) return a;
+    a = a.replace(/^[！!，,\s]+/, '').replace(/^您好[，,!\s]*您好/u, '');
+    if (!a || /^[！!，,\s]+$/.test(a)) return '';
     a = R.oralizeFormalPhrases(a);
     const prefixReserve = isFirstTurn && a.length > 8 ? 3 : 0;
     a = R.enforceTurnLength(a, maxLen, prefixReserve);
@@ -298,11 +318,21 @@
     return false;
   }
 
-  function needsLLMVoiceify(entry) {
-    if (entry.isComplex) return true;
+  function needsLLMVoiceify(entry, entryAfterLocal) {
+    if (entry.isComplex && R.detectSensitive((entry.question || '') + R.stripHtml(entry.answer || ''))) return true;
+    if ((entry._voiceQuality || 0) >= 25) return true;
     if (entry.hasHtml && (entry.rawAnswerLength || 0) > 80) return true;
-    if ((entry.rawAnswerLength || 0) > 250) return true;
-    return (entry.answerTurns || []).some(t => t.length > 200);
+    if ((entry.rawAnswerLength || 0) > 350) return true;
+    const turn = (entryAfterLocal?.answerTurns || [])[0] || '';
+    if (R.isOverlyFormal(turn)) return true;
+    return (entryAfterLocal?.answerTurns || []).some(t => t.length > 200);
+  }
+
+  function rankForLLM(findings, entries) {
+    return findings
+      .map((f, i) => ({ finding: f, index: i, entry: entries[i], quality: entries[i]?._voiceQuality || 0 }))
+      .filter(({ finding, entry }) => needsLLMVoiceify(finding, entry))
+      .sort((a, b) => b.quality - a.quality || (b.finding.rawAnswerLength || 0) - (a.finding.rawAnswerLength || 0));
   }
 
   global.KVLocalEngine = {
@@ -312,6 +342,8 @@
     localGenerateSimilarQuestions,
     needsLLMExtraction,
     needsLLMVoiceify,
+    rankForLLM,
+    scoreVoiceQuality,
     buildStats
   };
 })(window);

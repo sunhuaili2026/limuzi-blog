@@ -2,7 +2,14 @@
 (function (global) {
   const { preprocessText, applyLayer1ToEntry, chunkText, ensureCategoryPath } = global.KVTextRules;
   const { buildExtractPrompt, buildVoiceifyPrompt, buildDedupPrompt, buildSimilarQuestionsPrompt } = global.KVPrompts;
-  const Local = global.KVLocalEngine;
+
+  function getLocalEngine() {
+    const engine = global.KVLocalEngine;
+    if (!engine || typeof engine.localExtractFindings !== 'function') {
+      throw new Error('内置规则引擎未加载。请按 Ctrl+Shift+R 强制刷新页面；若仍失败，请检查 /tools/knowledge-voice/localKnowledgeEngine.js 是否可访问。');
+    }
+    return engine;
+  }
 
   function safeJsonParse(content) {
     const match = content.match(/\{[\s\S]*\}/);
@@ -50,9 +57,9 @@
 
   async function phase1Extract(text, config, onProgress) {
     onProgress?.({ phase: 'extracting', message: '内置规则拆解中...' });
-    const localFindings = Local.localExtractFindings(text, config);
+    const localFindings = getLocalEngine().localExtractFindings(text, config);
 
-    if (!config.enableLLMEnhance || !Local.needsLLMExtraction(text, localFindings)) {
+    if (!config.enableLLMEnhance || !getLocalEngine().needsLLMExtraction(text, localFindings)) {
       onProgress?.({
         phase: 'extracting',
         message: `内置规则提取完成（${localFindings.length} 条）`
@@ -88,7 +95,7 @@
 
   async function phase2Voiceify(findings, config, onProgress) {
     onProgress?.({ phase: 'voiceifying', message: '内置规则语音化改写中...' });
-    let entries = Local.localVoiceifyFindings(findings, config);
+    let entries = getLocalEngine().localVoiceifyFindings(findings, config);
 
     if (!config.enableLLMEnhance) {
       onProgress?.({
@@ -98,7 +105,7 @@
       return entries;
     }
 
-    const complex = findings.filter((f, i) => Local.needsLLMVoiceify({
+    const complex = findings.filter((f, i) => getLocalEngine().needsLLMVoiceify({
       ...f,
       answerTurns: entries[i]?.answerTurns
     }));
@@ -148,7 +155,7 @@
 
   async function phase3Dedup(entries, config, onProgress) {
     onProgress?.({ phase: 'deduplicating', message: '内置规则去重审核中...' });
-    const localResult = Local.localDedupEntries(entries, config);
+    const localResult = getLocalEngine().localDedupEntries(entries, config);
 
     if (!config.enableLLMEnhance || entries.length <= 30) {
       return localResult;
@@ -187,7 +194,7 @@
           mergedCount: (localResult.audit.mergedCount || 0) + (parsed.mergedCount || 0),
           conflicts: [...(localResult.audit.conflicts || []), ...(parsed.conflicts || [])]
         },
-        stats: parsed.stats || Local.buildStats(deduped)
+        stats: parsed.stats || getLocalEngine().buildStats(deduped)
       };
     } catch {
       return localResult;
@@ -198,7 +205,7 @@
     if (!config.generateSimilarQuestions) return [];
 
     onProgress?.({ phase: 'generating_similar', message: '内置规则生成相似问...' });
-    const localSimilar = Local.localGenerateSimilarQuestions(entries, config);
+    const localSimilar = getLocalEngine().localGenerateSimilarQuestions(entries, config);
 
     if (!config.enableLLMEnhance) return localSimilar;
 

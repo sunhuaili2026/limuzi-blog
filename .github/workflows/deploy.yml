@@ -41,13 +41,13 @@ jobs:
             set -e
             WEB_ROOT="/var/www/html"
             BACKUP_DIR="/var/www/backup/$(date +%Y%m%d_%H%M%S)"
-            mkdir -p "$BACKUP_DIR" /var/www/backup
-            if [ -d "$WEB_ROOT" ] && [ "$(ls -A "$WEB_ROOT" 2>/dev/null)" ]; then
-              cp -r "$WEB_ROOT"/* "$BACKUP_DIR"/ 2>/dev/null || true
+            sudo mkdir -p "$BACKUP_DIR" /var/www/backup
+            if [ -d "$WEB_ROOT" ] && [ "$(sudo ls -A "$WEB_ROOT" 2>/dev/null)" ]; then
+              sudo cp -r "$WEB_ROOT"/* "$BACKUP_DIR"/ 2>/dev/null || true
               echo "Backup: $BACKUP_DIR"
             fi
             cd "$WEB_ROOT"
-            git fetch origin main
-            git reset --hard origin/main
+            sudo git fetch origin main
+            sudo git reset --hard origin/main
             echo "Deployed: $(git log -1 --oneline)"
-            cd /var/www/backup/ && ls -t | tail -n +6 | xargs -r rm -rf || true
+            cd /var/www/backup/ && sudo ls -t | tail -n +6 | xargs -r sudo rm -rf || true

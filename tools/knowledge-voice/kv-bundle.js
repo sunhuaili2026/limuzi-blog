@@ -1,4 +1,4 @@
-/* KV Bundle - 2026-07-02T07:20:05Z */
+/* KV Bundle - 2026-07-02T07:34:18Z */
 /* --- textProcessingRules.js --- */
 /** Layer 1 规则引擎 — 确定性文字处理 */
 (function (global) {
@@ -201,6 +201,7 @@
       .replace(/(?:^|\s)(?:问题表现|解决方案|处理建议|故障说明)[：:]\s*/g, ' ')
       .replace(/\s+解决方案\s+/g, ' ')
       .replace(/仪表盘显示(?:第)?[\d一二三四五六七八九十]+号故障代码?[，,]?\s*/g, '')
+      .replace(/无助力[，,。]?\s*/g, '')
       .replace(/该问题需要专业工程师处理[，,。]?\s*/g, '')
       .replace(/\b\d{10,}\b/g, ' ')
       .replace(/\s{2,}/g, ' ')
@@ -225,8 +226,7 @@
 
   function isAlreadyVoiceifiedAlarm(text) {
     const s = String(text ?? '').trim();
-    return /^一般是[^，,]+，(?:需要工程师|建议打开|您可以在)/.test(s)
-      || /^建议打开九号出行App/.test(s)
+    return /^建议打开九号出行App/.test(s)
       || /^您可以在九号出行App服务页/.test(s)
       || /^需要工程师处理，建议您在九号出行App/.test(s);
   }
@@ -241,10 +241,6 @@
     t = stripFormalOpenings(stripBoilerplate(t));
     t = stripDocFieldLabels(t);
 
-    const symptoms = [];
-    const symMatch = t.match(/无助力|无法骑行|无法启动|不能骑行|助力失效|无法充电|漏液|异响|失控|断电/);
-    if (symMatch) symptoms.push(symMatch[0]);
-
     const actionClauses = splitIntoClauses(t)
       .filter(s => /打开|点|找到|填写|预约|报修|门店|服务页|设备页/.test(s))
       .filter(s => !/^无助力|一般是|仪表盘/.test(s.trim()))
@@ -254,7 +250,6 @@
       });
 
     const parts = [];
-    if (symptoms.length) parts.push('一般是' + symptoms[0]);
 
     if (actionClauses.length) {
       parts.push(compressAlarmAction(actionClauses[0]));
@@ -272,7 +267,6 @@
     }
 
     let result = parts.slice(0, 2).join('，');
-    result = result.replace(/(一般是[^，,]+，)\1+/g, '$1');
     if (!/[。！？?]$/.test(result)) result += '。';
     return enforceTurnLength(result, maxLen, 0);
   }

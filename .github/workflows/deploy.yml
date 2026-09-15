@@ -28,7 +28,34 @@ jobs:
           fi
           echo "✅ Secrets 已配置，开始部署..."
 
-      - name: Deploy to Tencent Cloud via SSH
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Pack site for upload
+        run: |
+          tar -czf limuzi-site.tgz \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='.cursor' \
+            --exclude='limuzi-site.tgz' \
+            .
+          ls -lh limuzi-site.tgz
+
+      # 服务器直连 GitHub 常 SSL 超时，改为 CI 打包后 SCP 上传
+      - name: Upload package to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "limuzi-site.tgz"
+          target: "/tmp"
+          overwrite: true
+
+      - name: Unpack on Tencent Cloud
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -41,38 +68,39 @@ jobs:
             set -e
             WEB_ROOT="/var/www/html"
             BACKUP_DIR="/var/www/backup/$(date +%Y%m%d_%H%M%S)"
-            sudo mkdir -p "$BACKUP_DIR" /var/www/backup
+            sudo mkdir -p "$BACKUP_DIR" /var/www/backup "$WEB_ROOT"
+
             if [ -d "$WEB_ROOT" ] && [ "$(sudo ls -A "$WEB_ROOT" 2>/dev/null)" ]; then
-              sudo cp -r "$WEB_ROOT"/* "$BACKUP_DIR"/ 2>/dev/null || true
+              sudo cp -a "$WEB_ROOT"/. "$BACKUP_DIR"/ 2>/dev/null || true
               echo "Backup: $BACKUP_DIR"
             fi
-            cd "$WEB_ROOT"
-            for i in 1 2 3; do
-              sudo git fetch origin main && break
-              echo "git fetch retry $i..."
-              sleep 5
-            done
-            sudo git reset --hard origin/main || true
-            echo "Deployed: $(git log -1 --oneline 2>/dev/null || echo 'git log failed')"
-            # 恢复 git 仓库外的工具（如 SmartCS），避免自动部署覆盖
+
+            TMP_EXTRACT="/tmp/limuzi-deploy-$$"
+            rm -rf "$TMP_EXTRACT"
+            mkdir -p "$TMP_EXTRACT"
+            tar -xzf /tmp/limuzi-site.tgz -C "$TMP_EXTRACT"
+
+            # 覆盖写入仓库文件；不删除服务器上包外的额外内容
+            sudo cp -a "$TMP_EXTRACT"/. "$WEB_ROOT"/
+
             if [ ! -d "$WEB_ROOT/tools/smartcs-coldstart" ] || [ -z "$(sudo ls -A "$WEB_ROOT/tools/smartcs-coldstart" 2>/dev/null)" ]; then
-              echo "SmartCS missing, searching backups..."
+              echo "SmartCS missing after sync, searching backups..."
               for b in $(sudo ls -t /var/www/backup/ 2>/dev/null); do
                 if [ -d "/var/www/backup/$b/tools/smartcs-coldstart" ]; then
                   sudo mkdir -p "$WEB_ROOT/tools"
-                  sudo cp -r "/var/www/backup/$b/tools/smartcs-coldstart" "$WEB_ROOT/tools/"
+                  sudo cp -a "/var/www/backup/$b/tools/smartcs-coldstart" "$WEB_ROOT/tools/"
                   echo "Restored smartcs-coldstart from backup $b"
-                  break
-                fi
-                if [ -d "/var/www/backup/$b/tools/smartcs-v3" ]; then
-                  sudo mkdir -p "$WEB_ROOT/tools/smartcs-coldstart"
-                  sudo cp -r "/var/www/backup/$b/tools/smartcs-v3/"* "$WEB_ROOT/tools/smartcs-coldstart/" 2>/dev/null || \
-                  sudo cp -r "/var/www/backup/$b/tools/smartcs-v3" "$WEB_ROOT/tools/smartcs-coldstart"
-                  echo "Restored smartcs-v3 as smartcs-coldstart from backup $b"
                   break
                 fi
               done
             fi
+
+            echo "Deployed coldstart bytes:"
+            sudo wc -c "$WEB_ROOT/tools/smartcs-coldstart/index.html" 2>/dev/null || true
             echo "Tools on server:"
             sudo ls -la "$WEB_ROOT/tools/" 2>/dev/null || true
+            sudo grep -q "对话冷启动工作台" "$WEB_ROOT/tools/smartcs-coldstart/index.html"
+
+            rm -rf "$TMP_EXTRACT" /tmp/limuzi-site.tgz
             cd /var/www/backup/ && sudo ls -t | tail -n +6 | xargs -r sudo rm -rf || true
+            echo "✅ Deploy finished"

@@ -99,7 +99,7 @@ jobs:
             sudo wc -c "$WEB_ROOT/tools/smartcs-coldstart/index.html" 2>/dev/null || true
             echo "Tools on server:"
             sudo ls -la "$WEB_ROOT/tools/" 2>/dev/null || true
-            sudo grep -q "对话冷启动工作台" "$WEB_ROOT/tools/smartcs-coldstart/index.html"
+            sudo grep -q "AI客服冷启动系统" "$WEB_ROOT/tools/smartcs-coldstart/index.html"
 
             rm -rf "$TMP_EXTRACT" /tmp/limuzi-site.tgz
             cd /var/www/backup/ && sudo ls -t | tail -n +6 | xargs -r sudo rm -rf || true

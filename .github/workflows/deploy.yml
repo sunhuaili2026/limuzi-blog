@@ -33,13 +33,13 @@ jobs:
 
       - name: Pack site for upload
         run: |
-          tar -czf limuzi-site.tgz \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='node_modules' \
-            --exclude='.cursor' \
-            --exclude='limuzi-site.tgz' \
+          tar -czf /tmp/limuzi-site.tgz \
+            --exclude='./.git' \
+            --exclude='./.github' \
+            --exclude='./node_modules' \
+            --exclude='./.cursor' \
             .
+          mv /tmp/limuzi-site.tgz ./limuzi-site.tgz
           ls -lh limuzi-site.tgz
 
       # 服务器直连 GitHub 常 SSL 超时，改为 CI 打包后 SCP 上传

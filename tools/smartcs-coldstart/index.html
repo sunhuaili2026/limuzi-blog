@@ -10,146 +10,162 @@
     <style>
         :root {
             --sc-line: rgba(148, 163, 184, 0.16);
-            --sc-panel: rgba(15, 23, 42, 0.72);
+            --sc-panel: rgba(15, 23, 42, 0.75);
+            --sc-cyan: #38bdf8;
+            --sc-mint: #34d399;
+            --sc-warn: #fbbf24;
+            --sc-danger: #f87171;
         }
         body { font-family: "IBM Plex Sans", system-ui, sans-serif; }
-        .sc-wrap { max-width: 1240px; margin: 0 auto; }
-        .sc-hero {
-            display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px;
-            align-items: end; margin-bottom: 22px;
-        }
-        @media (max-width: 920px) { .sc-hero { grid-template-columns: 1fr; } }
+        .sc-wrap { max-width: 1280px; margin: 0 auto; }
+        .sc-hero { margin-bottom: 18px; }
         .sc-hero h1 {
-            font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.02em;
-            margin: 8px 0 10px; line-height: 1.15;
+            font-size: clamp(28px, 4vw, 38px); letter-spacing: -0.02em;
+            margin: 8px 0 8px; line-height: 1.15;
         }
-        .sc-hero p { color: var(--text-secondary); font-size: 15px; max-width: 54ch; }
-        .sc-pipeline {
-            display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 12px;
-            border-radius: 16px; border: 1px solid var(--sc-line);
-            background:
-                radial-gradient(circle at 15% 20%, rgba(56,189,248,.12), transparent 42%),
-                radial-gradient(circle at 90% 0%, rgba(52,211,153,.1), transparent 36%),
-                var(--bg-card);
+        .sc-hero p { color: var(--text-secondary); font-size: 15px; max-width: 62ch; }
+        .sc-layout {
+            display: grid;
+            grid-template-columns: 300px 280px 1fr;
+            gap: 16px;
         }
-        @media (max-width: 920px) { .sc-pipeline { grid-template-columns: 1fr 1fr; } }
-        .sc-step {
-            padding: 12px; border-radius: 12px; background: rgba(15,23,42,.45);
-            border: 1px solid transparent; min-height: 84px; transition: .25s ease;
-        }
-        .sc-step .n { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
-        .sc-step .t { font-size: 13px; font-weight: 700; }
-        .sc-step .d { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
-        .sc-step.active { border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.08); }
-        .sc-step.done { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.08); }
-        .sc-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-        .sc-tab {
-            padding: 10px 16px; border-radius: 999px; border: 1px solid var(--sc-line);
-            color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 600;
-        }
-        .sc-tab.active {
-            color: #031525; border-color: transparent;
-            background: linear-gradient(135deg, #38bdf8, #34d399);
-        }
-        .sc-grid { display: grid; grid-template-columns: 300px 1fr; gap: 18px; }
-        @media (max-width: 980px) { .sc-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1100px) { .sc-layout { grid-template-columns: 1fr; } }
         .sc-panel {
             background: var(--sc-panel); border: 1px solid var(--sc-line);
-            border-radius: 18px; padding: 18px; backdrop-filter: blur(8px);
+            border-radius: 16px; padding: 16px; backdrop-filter: blur(8px);
         }
         .sc-panel h3 {
-            font-size: 14px; font-weight: 700; margin-bottom: 14px;
+            font-size: 14px; font-weight: 700; margin-bottom: 12px;
             padding-bottom: 10px; border-bottom: 1px solid var(--sc-line);
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
         }
-        .sc-field { margin-bottom: 12px; }
-        .sc-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+        .sc-field { margin-bottom: 10px; }
+        .sc-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
         .sc-field input, .sc-field textarea, .sc-field select {
-            width: 100%; background: rgba(15,23,42,.7); border: 1px solid var(--sc-line);
-            border-radius: 10px; padding: 10px 12px; color: var(--text-primary); font: inherit; font-size: 13px;
+            width: 100%; background: rgba(15,23,42,.75); border: 1px solid var(--sc-line);
+            border-radius: 10px; padding: 9px 11px; color: var(--text-primary); font: inherit; font-size: 13px;
         }
-        .sc-field textarea { min-height: 70px; resize: vertical; }
+        .sc-field textarea { min-height: 64px; resize: vertical; }
         .sc-field input:focus, .sc-field textarea:focus, .sc-field select:focus {
             outline: none; border-color: rgba(56,189,248,.55); box-shadow: 0 0 0 3px rgba(56,189,248,.12);
         }
-        .sc-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--text-secondary); margin: 8px 0 12px; }
+        .sc-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--text-secondary); margin: 8px 0; }
         .sc-check input { width: auto; margin-top: 2px; }
         .sc-file {
             display: block; border: 1.5px dashed var(--sc-line); border-radius: 12px;
-            padding: 14px; text-align: center; color: var(--text-secondary); font-size: 13px; cursor: pointer;
+            padding: 12px; text-align: center; color: var(--text-secondary); font-size: 13px; cursor: pointer;
         }
         .sc-file:hover { border-color: rgba(56,189,248,.5); color: var(--text-primary); }
         .sc-file input { display: none; }
-        .sc-actions { display: grid; gap: 8px; margin-top: 10px; }
         .sc-btn {
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            padding: 11px 14px; border-radius: 11px; border: 1px solid var(--sc-line);
-            background: rgba(30,41,59,.85); color: var(--text-primary);
+            padding: 10px 14px; border-radius: 10px; border: 1px solid var(--sc-line);
+            background: rgba(30,41,59,.9); color: var(--text-primary);
             font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none;
         }
-        .sc-btn.primary { background: linear-gradient(135deg, #0ea5e9, #10b981); border: none; color: #031525; }
+        .sc-btn.primary { background: linear-gradient(135deg, #0ea5e9, #10b981); border: none; color: #031525; width: 100%; }
         .sc-btn.ghost { background: transparent; }
+        .sc-btn.danger { border-color: rgba(248,113,113,.35); color: #fca5a5; }
         .sc-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .sc-actions { display: grid; gap: 8px; margin-top: 10px; }
         .sc-hint { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 8px; }
-        .sc-stack { display: grid; gap: 14px; }
         .sc-textarea {
-            width: 100%; min-height: 230px; resize: vertical;
-            background: rgba(15,23,42,.7); border: 1px solid var(--sc-line); border-radius: 14px;
-            padding: 14px; color: var(--text-primary); font: inherit; font-size: 14px; line-height: 1.7;
+            width: 100%; min-height: 160px; resize: vertical;
+            background: rgba(15,23,42,.75); border: 1px solid var(--sc-line); border-radius: 12px;
+            padding: 12px; color: var(--text-primary); font: inherit; font-size: 13px; line-height: 1.65;
         }
-        .sc-stats { display: none; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .sc-stats.active { display: grid; }
+        .sc-banner {
+            display: none; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+            border: 1px solid rgba(56,189,248,.3); background: rgba(56,189,248,.08);
+            color: #bae6fd; font-size: 13px;
+        }
+        .sc-banner.show { display: block; }
+        .sc-banner.warn { border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.1); color: #fde68a; }
+        .sc-banner.err { border-color: rgba(248,113,113,.35); background: rgba(248,113,113,.1); color: #fecaca; }
+        .sc-banner.ok { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.1); color: #a7f3d0; }
+
+        .task-list { display: grid; gap: 8px; max-height: 70vh; overflow: auto; }
+        .task-card {
+            border: 1px solid var(--sc-line); border-radius: 12px; padding: 12px;
+            background: rgba(15,23,42,.55); cursor: pointer; transition: .2s ease;
+        }
+        .task-card:hover { border-color: rgba(56,189,248,.35); }
+        .task-card.active { border-color: rgba(56,189,248,.55); background: rgba(56,189,248,.08); }
+        .task-card .title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+        .task-card .meta { font-size: 11px; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 6px; }
+        .task-status {
+            font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+            border: 1px solid transparent;
+        }
+        .task-status.queued { color: #cbd5e1; background: rgba(148,163,184,.12); }
+        .task-status.running { color: #7dd3fc; background: rgba(56,189,248,.12); border-color: rgba(56,189,248,.25); }
+        .task-status.done { color: #6ee7b7; background: rgba(52,211,153,.12); border-color: rgba(52,211,153,.25); }
+        .task-status.failed { color: #fca5a5; background: rgba(248,113,113,.12); border-color: rgba(248,113,113,.25); }
+
+        .sc-pipeline {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px;
+        }
+        @media (max-width: 720px) { .sc-pipeline { grid-template-columns: 1fr 1fr; } }
+        .sc-step {
+            padding: 10px; border-radius: 10px; background: rgba(15,23,42,.45);
+            border: 1px solid transparent; min-height: 70px;
+        }
+        .sc-step .n { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+        .sc-step .t { font-size: 12px; font-weight: 700; }
+        .sc-step .d { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+        .sc-step.active { border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.08); }
+        .sc-step.done { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.08); }
+        .sc-progress-bar { height: 8px; border-radius: 999px; background: rgba(148,163,184,.15); overflow: hidden; margin: 8px 0; }
+        .sc-progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #38bdf8, #34d399); transition: width .3s ease; }
+        .sc-progress-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-secondary); }
+
+        .sc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
         @media (max-width: 720px) { .sc-stats { grid-template-columns: 1fr 1fr; } }
-        .sc-stat { border: 1px solid var(--sc-line); border-radius: 12px; padding: 12px; background: rgba(15,23,42,.55); }
-        .sc-stat .num { font-family: "IBM Plex Mono", monospace; font-size: 22px; font-weight: 600; color: #38bdf8; }
-        .sc-stat .lbl { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-        .sc-progress { display: none; border: 1px solid var(--sc-line); border-radius: 14px; padding: 16px; background: rgba(15,23,42,.55); }
-        .sc-progress.active { display: block; }
-        .sc-progress-bar { height: 8px; border-radius: 999px; background: rgba(148,163,184,.15); overflow: hidden; margin: 10px 0 8px; }
-        .sc-progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #38bdf8, #34d399); transition: width .35s ease; }
-        .sc-progress-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--text-secondary); }
-        .sc-result { display: none; }
-        .sc-result.active { display: block; }
-        .sc-rtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+        .sc-stat { border: 1px solid var(--sc-line); border-radius: 10px; padding: 10px; background: rgba(15,23,42,.45); }
+        .sc-stat .num { font-family: "IBM Plex Mono", monospace; font-size: 18px; font-weight: 600; color: var(--sc-cyan); }
+        .sc-stat .lbl { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+        .sc-rtabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
         .sc-rtab {
             border: 1px solid var(--sc-line); background: transparent; color: var(--text-secondary);
-            border-radius: 999px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+            border-radius: 999px; padding: 7px 11px; font-size: 12px; font-weight: 600; cursor: pointer;
         }
         .sc-rtab.active { color: var(--text-primary); border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.12); }
-        .sc-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .sc-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
         .sc-item {
-            border: 1px solid var(--sc-line); border-radius: 14px; padding: 14px;
-            background: rgba(15,23,42,.55); margin-bottom: 10px;
+            border: 1px solid var(--sc-line); border-radius: 12px; padding: 12px;
+            background: rgba(15,23,42,.5); margin-bottom: 8px;
         }
-        .sc-item h4 { font-size: 15px; margin-bottom: 8px; }
-        .sc-item p, .sc-item li { color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+        .sc-item h4 { font-size: 14px; margin-bottom: 6px; }
+        .sc-item p, .sc-item li { color: var(--text-secondary); font-size: 13px; line-height: 1.65; }
         .sc-item ol, .sc-item ul { padding-left: 18px; margin: 0; }
-        .sc-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .sc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
         .sc-chip {
-            font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 999px;
+            font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px;
             background: rgba(56,189,248,.12); color: #7dd3fc; border: 1px solid rgba(56,189,248,.2);
         }
         .sc-chip.ok { background: rgba(52,211,153,.12); color: #6ee7b7; border-color: rgba(52,211,153,.25); }
         .sc-chip.warn { background: rgba(251,191,36,.12); color: #fcd34d; border-color: rgba(251,191,36,.25); }
-        .sc-chip.muted { background: rgba(148,163,184,.12); color: #cbd5e1; border-color: rgba(148,163,184,.2); }
-        .sc-similar { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--sc-line); font-size: 12px; color: var(--text-secondary); }
+        .sc-similar { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--sc-line); font-size: 12px; color: var(--text-secondary); }
         .sc-similar span {
-            display: inline-block; margin: 3px 6px 3px 0; padding: 3px 8px; border-radius: 8px;
+            display: inline-block; margin: 3px 6px 3px 0; padding: 2px 7px; border-radius: 8px;
             background: rgba(30,41,59,.9); border: 1px solid var(--sc-line);
         }
-        .sc-empty {
-            text-align: center; padding: 42px 16px; color: var(--text-secondary);
-            border: 1px dashed var(--sc-line); border-radius: 14px;
-        }
-        .sc-empty strong { display: block; color: var(--text-primary); margin-bottom: 6px; font-size: 15px; }
         .pane { display: none; }
         .pane.active { display: block; }
+        .sc-empty {
+            text-align: center; padding: 36px 14px; color: var(--text-secondary);
+            border: 1px dashed var(--sc-line); border-radius: 12px;
+        }
+        .sc-empty strong { display: block; color: var(--text-primary); margin-bottom: 6px; }
         .sc-toast {
-            position: fixed; right: 20px; bottom: 20px; z-index: 2000; display: none;
+            position: fixed; right: 20px; bottom: 20px; z-index: 2000; display: none; max-width: 360px;
             background: #0f172a; border: 1px solid rgba(56,189,248,.35); color: var(--text-primary);
-            padding: 12px 16px; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.35);
+            padding: 12px 16px; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.35); font-size: 13px;
         }
         .sc-toast.show { display: block; animation: scIn .25s ease; }
-        @keyframes scIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        @keyframes scIn { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none; } }
+        .muted { color: var(--text-muted); font-size: 12px; }
     </style>
 </head>
 <body>
@@ -165,30 +181,27 @@
         </div>
     </nav>
 
-    <section class="page-header" style="padding:110px 0 18px;">
+    <section class="page-header" style="padding:110px 0 14px;">
         <div class="container sc-wrap">
             <div class="sc-hero">
-                <div>
-                    <span class="section-label">SmartCS · AI Customer Service</span>
-                    <h1>AI客服冷启动系统</h1>
-                    <p>把零散客服对话转成可上线的场景地图、SOP、FAQ 与相似问。先本地解析质量，再分阶段挖掘，最后审核导出。</p>
-                </div>
-                <div class="sc-pipeline" id="pipeline">
-                    <div class="sc-step" data-step="parse"><div class="n">01</div><div class="t">对话解析</div><div class="d">清洗 / 分段 / 统计</div></div>
-                    <div class="sc-step" data-step="scene"><div class="n">02</div><div class="t">场景挖掘</div><div class="d">意图与频次</div></div>
-                    <div class="sc-step" data-step="sop"><div class="n">03</div><div class="t">SOP 提炼</div><div class="d">可执行步骤</div></div>
-                    <div class="sc-step" data-step="faq"><div class="n">04</div><div class="t">FAQ + 相似问</div><div class="d">可导入知识</div></div>
-                    <div class="sc-step" data-step="review"><div class="n">05</div><div class="t">审核导出</div><div class="d">JSON / MD / CSV</div></div>
-                </div>
+                <span class="section-label">SmartCS · Task Workbench</span>
+                <h1>AI客服冷启动系统</h1>
+                <p>每次分析都会创建一个可跟踪任务：排队 → 解析 → 场景/SOP/FAQ → 完成。支持 Excel/CSV 上传、离线演示、历史回看与导出。</p>
             </div>
+            <div class="sc-banner" id="globalBanner"></div>
         </div>
     </section>
 
     <section class="section" style="padding-top:0;">
         <div class="container sc-wrap">
-            <div class="sc-grid">
+            <div class="sc-layout">
+                <!-- 左：新建任务 -->
                 <aside class="sc-panel">
-                    <h3>项目配置</h3>
+                    <h3>新建分析任务</h3>
+                    <div class="sc-field">
+                        <label for="taskName">任务名称</label>
+                        <input id="taskName" type="text" placeholder="例如：充电售后冷启动-0915">
+                    </div>
                     <div class="sc-field">
                         <label for="companyName">品牌名称 *</label>
                         <input id="companyName" type="text" placeholder="例如：示例出行">
@@ -216,75 +229,101 @@
                         </select>
                     </div>
                     <label class="sc-check"><input type="checkbox" id="genSimilar" checked><span>为 FAQ 生成口语相似问</span></label>
-                    <label class="sc-check"><input type="checkbox" id="offlineDemo"><span>离线演示模式（不调用 API）</span></label>
+                    <label class="sc-check"><input type="checkbox" id="offlineDemo" checked><span>离线演示优先（API 不可用时也可用）</span></label>
 
                     <label class="sc-file" for="fileInput">
-                        上传 CSV / TXT / JSON / Excel 对话或 FAQ
+                        上传 CSV / TXT / JSON / Excel
                         <input type="file" id="fileInput" accept=".csv,.txt,.json,.md,.xlsx,.xls">
                     </label>
                     <div id="fileName" class="sc-hint"></div>
 
-                    <div class="sc-actions">
-                        <button class="sc-btn primary" id="analyzeBtn" type="button">开始冷启动分析</button>
-                        <button class="sc-btn" id="sampleBtn" type="button">载入示例对话</button>
-                        <button class="sc-btn ghost" id="resetBtn" type="button">清空重置</button>
-                    </div>
-                    <p class="sc-hint">支持对话文本，或带「问题/答案」「客户/客服」表头的 Excel/CSV。勿把 .xlsx 当 TXT 打开。</p>
-                </aside>
-
-                <main class="sc-stack">
-                    <div class="sc-panel">
-                        <h3>对话输入</h3>
-                        <textarea class="sc-textarea" id="chatInput" placeholder="粘贴通话转写或在线客服记录…
+                    <div class="sc-field" style="margin-top:10px;">
+                        <label for="chatInput">对话 / FAQ 文本 *</label>
+                        <textarea class="sc-textarea" id="chatInput" placeholder="粘贴客服对话，或上传表格后自动转换…
 
 客户：订单还没发货
-客服：请提供订单号
-……
-
-——会话——
-客户：…"></textarea>
+客服：请提供订单号"></textarea>
                     </div>
-
-                    <div class="sc-stats" id="stats">
+                    <div class="sc-stats" id="inputStats">
                         <div class="sc-stat"><div class="num" id="statSessions">0</div><div class="lbl">会话段</div></div>
-                        <div class="sc-stat"><div class="num" id="statTurns">0</div><div class="lbl">对话轮次</div></div>
-                        <div class="sc-stat"><div class="num" id="statChars">0</div><div class="lbl">有效字符</div></div>
-                        <div class="sc-stat"><div class="num" id="statQuality">-</div><div class="lbl">输入质量</div></div>
+                        <div class="sc-stat"><div class="num" id="statTurns">0</div><div class="lbl">轮次</div></div>
+                        <div class="sc-stat"><div class="num" id="statChars">0</div><div class="lbl">字符</div></div>
+                        <div class="sc-stat"><div class="num" id="statQuality">-</div><div class="lbl">质量</div></div>
                     </div>
 
-                    <div class="sc-progress" id="progress">
-                        <div id="progressText">准备中…</div>
+                    <div class="sc-actions">
+                        <button class="sc-btn primary" id="createTaskBtn" type="button">创建并开始任务</button>
+                        <button class="sc-btn" id="sampleBtn" type="button">载入示例对话</button>
+                        <button class="sc-btn ghost" id="clearInputBtn" type="button">清空输入</button>
+                    </div>
+                    <p class="sc-hint">点击后立刻生成任务卡片并显示进度。API 超时会自动转离线演示，不会再“卡住没反应”。</p>
+                </aside>
+
+                <!-- 中：任务列表 -->
+                <aside class="sc-panel">
+                    <h3>
+                        <span>任务列表</span>
+                        <button class="sc-btn ghost danger" id="clearTasksBtn" type="button" style="padding:4px 8px;font-size:11px;">清空</button>
+                    </h3>
+                    <div id="taskList" class="task-list"></div>
+                    <div class="sc-empty" id="taskListEmpty">
+                        <strong>还没有任务</strong>
+                        在左侧填写配置并点击「创建并开始任务」
+                    </div>
+                </aside>
+
+                <!-- 右：任务详情 -->
+                <main class="sc-panel" id="detailPanel">
+                    <div id="detailEmpty" class="sc-empty">
+                        <strong>选择一个任务查看详情</strong>
+                        运行中的任务会在这里显示阶段进度与结果
+                    </div>
+
+                    <div id="detailBody" style="display:none;">
+                        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                            <div>
+                                <div class="muted" id="detailId"></div>
+                                <h3 style="border:none;padding:0;margin:4px 0 0;" id="detailTitle">任务详情</h3>
+                            </div>
+                            <div id="detailStatus" class="task-status queued">queued</div>
+                        </div>
+
+                        <div class="sc-pipeline" id="pipeline">
+                            <div class="sc-step" data-step="parse"><div class="n">01</div><div class="t">对话解析</div><div class="d">清洗 / 统计</div></div>
+                            <div class="sc-step" data-step="scene"><div class="n">02</div><div class="t">场景挖掘</div><div class="d">意图 / 频次</div></div>
+                            <div class="sc-step" data-step="sop"><div class="n">03</div><div class="t">SOP 提炼</div><div class="d">可执行步骤</div></div>
+                            <div class="sc-step" data-step="faq"><div class="n">04</div><div class="t">FAQ + 相似问</div><div class="d">可导入知识</div></div>
+                            <div class="sc-step" data-step="review"><div class="n">05</div><div class="t">审核导出</div><div class="d">JSON / MD / CSV</div></div>
+                        </div>
+
                         <div class="sc-progress-bar"><div class="sc-progress-fill" id="progressFill"></div></div>
                         <div class="sc-progress-meta">
-                            <span id="progressPhase">等待开始</span>
+                            <span id="progressText">等待开始</span>
                             <span id="progressPct">0%</span>
                         </div>
-                    </div>
+                        <div class="sc-hint" id="detailError" style="color:#fca5a5;"></div>
 
-                    <div class="sc-result sc-panel" id="result">
-                        <div class="sc-rtabs" id="resultTabs">
-                            <button class="sc-rtab active" type="button" data-pane="overview">总览</button>
-                            <button class="sc-rtab" type="button" data-pane="scenarios">场景</button>
-                            <button class="sc-rtab" type="button" data-pane="sops">SOP</button>
-                            <button class="sc-rtab" type="button" data-pane="faqs">FAQ</button>
-                            <button class="sc-rtab" type="button" data-pane="risks">风险点</button>
+                        <div id="resultWrap" style="display:none;margin-top:14px;">
+                            <div class="sc-rtabs" id="resultTabs">
+                                <button class="sc-rtab active" type="button" data-pane="overview">总览</button>
+                                <button class="sc-rtab" type="button" data-pane="scenarios">场景</button>
+                                <button class="sc-rtab" type="button" data-pane="sops">SOP</button>
+                                <button class="sc-rtab" type="button" data-pane="faqs">FAQ</button>
+                                <button class="sc-rtab" type="button" data-pane="risks">风险点</button>
+                            </div>
+                            <div class="sc-toolbar">
+                                <button class="sc-btn" type="button" id="btnJson">下载 JSON</button>
+                                <button class="sc-btn" type="button" id="btnMd">下载 Markdown</button>
+                                <button class="sc-btn" type="button" id="btnCsv">下载 FAQ CSV</button>
+                                <button class="sc-btn" type="button" id="btnCopy">复制 FAQ</button>
+                                <button class="sc-btn ghost" type="button" id="rerunBtn">重新运行</button>
+                            </div>
+                            <div class="pane active" id="pane-overview"></div>
+                            <div class="pane" id="pane-scenarios"></div>
+                            <div class="pane" id="pane-sops"></div>
+                            <div class="pane" id="pane-faqs"></div>
+                            <div class="pane" id="pane-risks"></div>
                         </div>
-                        <div class="sc-toolbar">
-                            <button class="sc-btn" type="button" id="btnJson">下载 JSON</button>
-                            <button class="sc-btn" type="button" id="btnMd">下载 Markdown</button>
-                            <button class="sc-btn" type="button" id="btnCsv">下载 FAQ CSV</button>
-                            <button class="sc-btn" type="button" id="btnCopy">复制 FAQ</button>
-                        </div>
-                        <div class="pane active" id="pane-overview"></div>
-                        <div class="pane" id="pane-scenarios"></div>
-                        <div class="pane" id="pane-sops"></div>
-                        <div class="pane" id="pane-faqs"></div>
-                        <div class="pane" id="pane-risks"></div>
-                    </div>
-
-                    <div class="sc-empty" id="emptyState">
-                        <strong>还没有分析结果</strong>
-                        上传或粘贴对话后点击「开始冷启动分析」。也可先「载入示例对话」体验完整流程。
                     </div>
                 </main>
             </div>
@@ -300,8 +339,15 @@
     <script>
     (function () {
         const API_PASSWORD = "limuzi2025";
-        let lastResult = null;
-        let parseMeta = null;
+        const STORAGE_KEY = "smartcs_coldstart_tasks_v1";
+        const MAX_INPUT_CHARS = 120000;
+        const API_TIMEOUT_MS = 18000;
+        const BINARY_HINT = /PK\x03\x04|docProps\/|xl\/|\[Content_Types\]\.xml|\x00/;
+
+        /** @type {Array<any>} */
+        let tasks = loadTasks();
+        let activeTaskId = tasks[0] ? tasks[0].id : null;
+        let running = false;
 
         const SAMPLE = `客户：我的车充不进电，充电器灯是红的
 客服：您好，请问是哪款车型？电池是否在车上充电？
@@ -336,7 +382,13 @@
             const el = $("toast");
             el.textContent = msg;
             el.classList.add("show");
-            setTimeout(() => el.classList.remove("show"), 2200);
+            clearTimeout(toast._t);
+            toast._t = setTimeout(() => el.classList.remove("show"), 3200);
+        }
+        function banner(msg, type) {
+            const el = $("globalBanner");
+            el.textContent = msg;
+            el.className = "sc-banner show" + (type ? " " + type : "");
         }
         function esc(s) {
             const d = document.createElement("div");
@@ -344,460 +396,31 @@
             return d.innerHTML;
         }
         function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
-
-        function resetSteps() {
-            document.querySelectorAll(".sc-step").forEach((el) => el.classList.remove("active", "done"));
-        }
-        function setStep(name, state) {
-            document.querySelectorAll(".sc-step").forEach((el) => {
-                if (el.dataset.step !== name) return;
-                el.classList.remove("active", "done");
-                if (state) el.classList.add(state);
-            });
-        }
-        function setProgress(pct, text, phase) {
-            $("progress").classList.add("active");
-            $("progressFill").style.width = pct + "%";
-            $("progressText").textContent = text;
-            $("progressPhase").textContent = phase;
-            $("progressPct").textContent = pct + "%";
+        function uid() { return "task_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7); }
+        function nowISO() { return new Date().toISOString(); }
+        function fmtTime(iso) {
+            if (!iso) return "-";
+            const d = new Date(iso);
+            const p = (n) => String(n).padStart(2, "0");
+            return p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
         }
 
-        function parseDialogues(raw) {
-            const text = (raw || "").trim();
-            if (!text) return { sessions: [], turns: 0, chars: 0, quality: "不足", tips: ["请粘贴至少一段完整对话"] };
-
-            const chunks = text
-                .split(/\n\s*(?:-{2,}|—{2,}|={2,}|会话分隔|——会话——)\s*\n/i)
-                .map((s) => s.trim())
-                .filter(Boolean);
-
-            const sessions = chunks.map((chunk, idx) => {
-                const lines = chunk.split(/\n+/).map((l) => l.trim()).filter(Boolean);
-                const turns = lines.filter((l) => /^(客户|用户|客服|坐席|系统|agent|user|bot)[:：]/i.test(l));
-                return {
-                    id: idx + 1,
-                    raw: chunk,
-                    lines: lines.length,
-                    turns: turns.length || Math.max(1, Math.floor(lines.length / 2))
-                };
-            });
-
-            const turns = sessions.reduce((a, s) => a + s.turns, 0);
-            const chars = text.replace(/\s+/g, "").length;
-            let quality = "一般";
-            const tips = [];
-            if (sessions.length >= 2 && turns >= 8 && chars >= 200) quality = "良好";
-            if (sessions.length >= 3 && turns >= 15 && chars >= 500) quality = "优秀";
-            if (chars < 120) tips.push("文本偏短，建议补充更多会话");
-            if (sessions.length < 2) tips.push("建议提供 2 段以上不同场景会话");
-            if (!/(客户|用户|客服)/.test(text)) tips.push("未检测到「客户/客服」角色标注，准确率可能下降");
-            return { sessions, turns, chars, quality, tips };
-        }
-
-        function refreshLocalStats() {
-            parseMeta = parseDialogues($("chatInput").value);
-            $("stats").classList.add("active");
-            $("statSessions").textContent = parseMeta.sessions.length;
-            $("statTurns").textContent = parseMeta.turns;
-            $("statChars").textContent = parseMeta.chars;
-            $("statQuality").textContent = parseMeta.quality;
-        }
-
-        function loadSample() {
-            $("companyName").value = "示例出行";
-            $("companyBrief").value = "智能两轮电动车；覆盖充电、配网、物流售后";
-            $("industry").value = "mobility";
-            $("chatInput").value = SAMPLE;
-            $("fileName").textContent = "已载入内置示例对话（3 段）";
-            refreshLocalStats();
-            toast("示例对话已载入");
-        }
-
-        function resetAll() {
-            lastResult = null;
-            parseMeta = null;
-            resetSteps();
-            $("chatInput").value = "";
-            $("companyName").value = "";
-            $("companyBrief").value = "";
-            $("fileName").textContent = "";
-            $("offlineDemo").checked = false;
-            $("stats").classList.remove("active");
-            $("progress").classList.remove("active");
-            $("result").classList.remove("active");
-            $("emptyState").style.display = "block";
-            $("progressFill").style.width = "0%";
-        }
-
-        function switchPane(btn) {
-            document.querySelectorAll(".sc-rtab").forEach((b) => b.classList.remove("active"));
-            document.querySelectorAll(".pane").forEach((p) => p.classList.remove("active"));
-            btn.classList.add("active");
-            $("pane-" + btn.dataset.pane).classList.add("active");
-        }
-
-        function industryLabel(v) {
-            return ({
-                mobility: "智能出行",
-                ecommerce: "电商零售",
-                saas: "SaaS",
-                finance: "金融保险",
-                general: "通用客服"
-            })[v] || "通用客服";
-        }
-
-        async function callAPI(messages, temperature) {
-            const res = await fetch("/api/deepseek", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    password: API_PASSWORD,
-                    model: "deepseek-chat",
-                    messages,
-                    temperature: temperature == null ? 0.35 : temperature
-                })
-            });
-            if (!res.ok) {
-                const t = await res.text().catch(() => "");
-                throw new Error("API " + res.status + (t ? ": " + t.slice(0, 120) : ""));
-            }
-            const data = await res.json();
-            const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-            if (!content) throw new Error("API 返回为空");
-            return content;
-        }
-
-        function parseJSON(text) {
-            const m = String(text).match(/\{[\s\S]*\}/);
-            if (!m) throw new Error("无法解析模型 JSON");
-            return JSON.parse(m[0]);
-        }
-
-        function buildOfflineResult(company, brief, meta) {
-            return {
-                summary: company + " 冷启动离线演示：基于 " + meta.sessions.length + " 段会话，覆盖充电故障、APP 配网与物流催发三类高频场景。",
-                scenarios: [
-                    { name: "充电异常排查", description: "车辆无法充电、充电器指示灯异常时的首问与排查路径。", frequency: "高", intent: "售后-充电", priority: "P0" },
-                    { name: "车辆配网 / 离线", description: "APP 显示离线、配网失败、蓝牙定位权限相关引导。", frequency: "高", intent: "使用指导-配网", priority: "P0" },
-                    { name: "物流催发 / 改派", description: "订单未发货查询、加急与物流方式变更。", frequency: "中", intent: "订单-物流", priority: "P1" }
-                ],
-                sops: [
-                    {
-                        scenario: "充电异常排查",
-                        goal: "快速判断是接触不良、供电问题还是硬件故障",
-                        steps: [
-                            "确认车型与充电方式（车充/拆电池充）",
-                            "检查充电器指示灯状态并指导重新插接",
-                            "建议更换插座并核对充电器匹配型号",
-                            "仍失败则引导售后检测与质保时效说明"
-                        ],
-                        escalation: "连续排查失败或涉及硬件更换时转售后工单"
-                    },
-                    {
-                        scenario: "车辆配网",
-                        goal: "帮助用户完成 APP 绑定与联网",
-                        steps: [
-                            "确认手机蓝牙、定位已开启且靠近车辆",
-                            "引导进入配网模式并检查 VPN 干扰",
-                            "超时失败则重启仪表后重试",
-                            "成功后提醒检查 OTA 更新"
-                        ],
-                        escalation: "多次失败且疑似硬件问题转技术支持"
-                    }
-                ],
-                faqs: [
-                    {
-                        question: "充电器红灯常亮充不进电怎么办？",
-                        answer: "请先确认充电口卡到位，并更换插座重试；若仍红灯，核对充电器型号是否匹配，必要时申请售后检测，质保范围内可更换。",
-                        category: "售后/充电",
-                        priority: "P0",
-                        similar: ["充不进电红灯", "充电器一直红灯", "车上充电没反应", "电池充不上电怎么处理"]
-                    },
-                    {
-                        question: "APP 显示车辆离线如何重新配网？",
-                        answer: "打开手机蓝牙和定位，在 APP 添加车辆并按仪表进入配网；保持两米内，关闭 VPN；失败可重启仪表后再试，成功后建议检查固件更新。",
-                        category: "使用指导/配网",
-                        priority: "P0",
-                        similar: ["车辆离线怎么配网", "配网一直转圈", "蓝牙配不上网", "APP连不上车"]
-                    },
-                    {
-                        question: "下单多日未发货可以改加急物流吗？",
-                        answer: "可以查询仓库状态并备注加急物流；若产生运费差价会短信通知，提交后一般次日揽收。",
-                        category: "订单/物流",
-                        priority: "P1",
-                        similar: ["怎么催发货", "能改顺丰吗", "订单多久发货", "想加急物流"]
-                    }
-                ],
-                risks: [
-                    { level: "中", title: "质保口径需统一", detail: "充电故障涉及质保更换时，需与售后政策文档对齐时效与责任边界。" },
-                    { level: "低", title: "示例数据偏差", detail: "当前为离线演示结果，上线前请用真实对话重跑并人工审核。" }
-                ],
-                meta: {
-                    mode: "offline-demo",
-                    company,
-                    brief,
-                    generatedAt: new Date().toISOString(),
-                    input: meta
-                }
-            };
-        }
-
-        async function analyzeWithAPI(company, brief, focus, text, meta, withSimilar) {
-            const industry = industryLabel($("industry").value);
-            const system = "你是 AI 客服冷启动架构师，服务企业「" + company + "」（行业：" + industry + "；背景：" + (brief || "未提供") + "）。\n" +
-                "任务：从客服对话中产出可直接用于机器人冷启动的结构化资产。\n" +
-                "分析重心：" + focus + "。\n" +
-                "只返回合法 JSON，不要 Markdown。字段：\n" +
-                "{\n" +
-                '  "summary": "一句话总览",\n' +
-                '  "scenarios": [{"name":"","description":"","frequency":"高/中/低","intent":"意图路径","priority":"P0/P1/P2"}],\n' +
-                '  "sops": [{"scenario":"","goal":"","steps":["..."],"escalation":""}],\n' +
-                '  "faqs": [{"question":"","answer":"","category":"目录","priority":"P0/P1/P2"' + (withSimilar ? ',"similar":["口语相似问"]' : "") + "}],\n" +
-                '  "risks": [{"level":"高/中/低","title":"","detail":""}]\n' +
-                "}\n" +
-                "要求：\n" +
-                "1) 场景按业务价值排序；2) SOP 步骤可执行；3) FAQ 答案口语清晰、可播报；4) 不要编造对话中不存在的政策数字；5) 至少覆盖对话中的主要问题。";
-
-            setStep("scene", "active");
-            setProgress(35, "正在挖掘业务场景与意图…", "场景挖掘");
-            const content = await callAPI([
-                { role: "system", content: system },
-                { role: "user", content: "以下是已解析的客服对话（约 " + meta.sessions.length + " 段 / " + meta.turns + " 轮）：\n\n" + text.slice(0, 28000) }
-            ], 0.35);
-
-            setStep("scene", "done");
-            setStep("sop", "active");
-            setStep("faq", "active");
-            setProgress(70, "正在整理 SOP、FAQ 与风险点…", "SOP / FAQ");
-
-            const data = parseJSON(content);
-            data.meta = {
-                mode: "api",
-                company,
-                brief,
-                industry,
-                focus,
-                generatedAt: new Date().toISOString(),
-                input: meta
-            };
-
-            if (withSimilar) {
-                const needSimilar = (data.faqs || []).filter((f) => !Array.isArray(f.similar) || f.similar.length < 3);
-                if (needSimilar.length) {
-                    setProgress(82, "正在补齐口语相似问…", "相似问");
-                    try {
-                        const simRaw = await callAPI([
-                            { role: "system", content: '你为客服 FAQ 生成口语相似问。只返回 JSON：{"items":[{"question":"原问","similar":["..."]}]}' },
-                            { role: "user", content: JSON.stringify(needSimilar.map((f) => ({ question: f.question, answer: f.answer }))) }
-                        ], 0.5);
-                        const sim = parseJSON(simRaw);
-                        const map = new Map((sim.items || []).map((i) => [i.question, i.similar || []]));
-                        data.faqs = (data.faqs || []).map((f) => ({
-                            ...f,
-                            similar: (f.similar && f.similar.length ? f.similar : map.get(f.question)) || []
-                        }));
-                    } catch (_) { /* ignore */ }
-                }
-            }
-
-            setStep("sop", "done");
-            setStep("faq", "done");
-            return data;
-        }
-
-        function renderResult(data) {
-            lastResult = data;
-            $("emptyState").style.display = "none";
-            $("result").classList.add("active");
-
-            const scenarios = data.scenarios || [];
-            const sops = data.sops || [];
-            const faqs = data.faqs || [];
-            const risks = data.risks || [];
-
-            $("pane-overview").innerHTML =
-                '<div class="sc-item"><h4>冷启动摘要</h4><p>' + esc(data.summary || "已完成分析") + "</p>" +
-                '<div class="sc-meta">' +
-                '<span class="sc-chip ok">' + esc(data.meta && data.meta.mode === "offline-demo" ? "离线演示" : "API 分析") + "</span>" +
-                '<span class="sc-chip">' + scenarios.length + " 场景</span>" +
-                '<span class="sc-chip">' + sops.length + " SOP</span>" +
-                '<span class="sc-chip">' + faqs.length + " FAQ</span>" +
-                '<span class="sc-chip warn">' + risks.length + " 风险点</span>" +
-                "</div></div>" +
-                '<div class="sc-item"><h4>建议上线顺序</h4><ol>' +
-                (scenarios.slice(0, 5).map((s) => "<li><strong>" + esc(s.name) + "</strong> — " + esc(s.priority || "P1") + " / " + esc(s.frequency || "") + "</li>").join("") || "<li>暂无</li>") +
-                "</ol></div>";
-
-            $("pane-scenarios").innerHTML = scenarios.length ? scenarios.map((s) =>
-                '<div class="sc-item"><h4>' + esc(s.name) + "</h4><p>" + esc(s.description) + '</p><div class="sc-meta">' +
-                (s.intent ? '<span class="sc-chip muted">' + esc(s.intent) + "</span>" : "") +
-                (s.frequency ? '<span class="sc-chip">' + esc("频次 " + s.frequency) + "</span>" : "") +
-                (s.priority ? '<span class="sc-chip ok">' + esc(s.priority) + "</span>" : "") +
-                "</div></div>"
-            ).join("") : '<div class="sc-empty">暂无场景</div>';
-
-            $("pane-sops").innerHTML = sops.length ? sops.map((s) =>
-                '<div class="sc-item"><h4>' + esc(s.scenario) + "</h4>" +
-                (s.goal ? "<p><strong>目标：</strong>" + esc(s.goal) + "</p>" : "") +
-                "<ol>" + (s.steps || []).map((step) => "<li>" + esc(step) + "</li>").join("") + "</ol>" +
-                (s.escalation ? '<p style="margin-top:8px;"><strong>升级条件：</strong>' + esc(s.escalation) + "</p>" : "") +
-                "</div>"
-            ).join("") : '<div class="sc-empty">暂无 SOP</div>';
-
-            $("pane-faqs").innerHTML = faqs.length ? faqs.map((f) =>
-                '<div class="sc-item"><h4>Q：' + esc(f.question) + "</h4><p>A：" + esc(f.answer) + '</p><div class="sc-meta">' +
-                (f.category ? '<span class="sc-chip muted">' + esc(f.category) + "</span>" : "") +
-                (f.priority ? '<span class="sc-chip">' + esc(f.priority) + "</span>" : "") +
-                "</div>" +
-                (Array.isArray(f.similar) && f.similar.length
-                    ? '<div class="sc-similar">相似问：' + f.similar.map((x) => "<span>" + esc(x) + "</span>").join("") + "</div>"
-                    : "") +
-                "</div>"
-            ).join("") : '<div class="sc-empty">暂无 FAQ</div>';
-
-            $("pane-risks").innerHTML = risks.length ? risks.map((r) =>
-                '<div class="sc-item"><h4>' + esc(r.title || "风险项") + "</h4><p>" + esc(r.detail || "") +
-                '</p><div class="sc-meta"><span class="sc-chip warn">' + esc("等级 " + (r.level || "中")) + "</span></div></div>"
-            ).join("") : '<div class="sc-empty">未发现明显风险</div>';
-        }
-
-        async function startAnalyze() {
-            const text = $("chatInput").value.trim();
-            const company = $("companyName").value.trim();
-            const brief = $("companyBrief").value.trim();
-            const focus = $("focus").value;
-            const withSimilar = $("genSimilar").checked;
-            const offline = $("offlineDemo").checked;
-
-            if (!text) { toast("请先上传或粘贴对话"); return; }
-            if (!company) { toast("请填写品牌名称"); return; }
-            if (looksBinary(text) || /docProps\/|xl\/sharedStrings\.xml|\[Content_Types\]\.xml/i.test(text)) {
-                toast("当前内容像 Excel 二进制乱码。请重新上传 .xlsx/.csv，或粘贴纯文本对话。");
-                return;
-            }
-            if (text.length > MAX_INPUT_CHARS * 1.2) {
-                toast("输入过长，请先拆分文件或重新上传（系统会自动截断超大表格）");
-                return;
-            }
-
-            const btn = $("analyzeBtn");
-            btn.disabled = true;
-            $("result").classList.remove("active");
-            $("emptyState").style.display = "none";
-            resetSteps();
-
+        function loadTasks() {
             try {
-                setStep("parse", "active");
-                setProgress(12, "正在本地解析对话…", "对话解析");
-                await sleep(250);
-                const meta = parseDialogues(text);
-                parseMeta = meta;
-                refreshLocalStats();
-                setStep("parse", "done");
-
-                let data;
-                if (offline) {
-                    setStep("scene", "active");
-                    setProgress(40, "离线演示：生成场景地图…", "场景挖掘");
-                    await sleep(350);
-                    setStep("scene", "done");
-                    setStep("sop", "active");
-                    setStep("faq", "active");
-                    setProgress(75, "离线演示：整理 SOP / FAQ…", "SOP / FAQ");
-                    await sleep(350);
-                    data = buildOfflineResult(company, brief, meta);
-                    setStep("sop", "done");
-                    setStep("faq", "done");
-                } else {
-                    try {
-                        data = await analyzeWithAPI(company, brief, focus, text, meta, withSimilar);
-                    } catch (err) {
-                        console.warn(err);
-                        toast("API 暂不可用，已切换离线演示结果");
-                        data = buildOfflineResult(company, brief, meta);
-                        setStep("scene", "done");
-                        setStep("sop", "done");
-                        setStep("faq", "done");
-                    }
-                }
-
-                setStep("review", "active");
-                setProgress(95, "正在渲染审核视图…", "审核导出");
-                renderResult(data);
-                setStep("review", "done");
-                setProgress(100, "冷启动分析完成", "完成");
-                toast("分析完成");
-            } catch (e) {
-                toast("分析失败：" + e.message);
-                $("emptyState").style.display = "block";
-            } finally {
-                btn.disabled = false;
-            }
+                const raw = localStorage.getItem(STORAGE_KEY);
+                const list = raw ? JSON.parse(raw) : [];
+                return Array.isArray(list) ? list : [];
+            } catch (_) { return []; }
         }
-
-        function downloadBlob(filename, content, type) {
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(new Blob([content], { type: type }));
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(a.href);
+        function saveTasks() {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks.slice(0, 30))); } catch (_) {}
         }
-
-        function downloadJSON() {
-            if (!lastResult) return;
-            downloadBlob("smartcs-coldstart.json", JSON.stringify(lastResult, null, 2), "application/json");
+        function getTask(id) { return tasks.find((t) => t.id === id) || null; }
+        function setActive(id) {
+            activeTaskId = id;
+            renderTaskList();
+            renderDetail();
         }
-
-        function downloadMarkdown() {
-            if (!lastResult) return;
-            const d = lastResult;
-            let md = "# " + ((d.meta && d.meta.company) || "AI客服") + " 冷启动报告\n\n";
-            md += (d.summary || "") + "\n\n## 场景\n";
-            (d.scenarios || []).forEach((s) => {
-                md += "\n### " + s.name + "\n- 描述：" + (s.description || "") + "\n- 意图：" + (s.intent || "") + "\n- 频次：" + (s.frequency || "") + "\n- 优先级：" + (s.priority || "") + "\n";
-            });
-            md += "\n## SOP\n";
-            (d.sops || []).forEach((s) => {
-                md += "\n### " + s.scenario + "\n";
-                if (s.goal) md += "目标：" + s.goal + "\n";
-                (s.steps || []).forEach((step, i) => { md += (i + 1) + ". " + step + "\n"; });
-                if (s.escalation) md += "升级：" + s.escalation + "\n";
-            });
-            md += "\n## FAQ\n";
-            (d.faqs || []).forEach((f) => {
-                md += "\n### Q：" + f.question + "\nA：" + f.answer + "\n";
-                if (f.similar && f.similar.length) md += "相似问：" + f.similar.join(" / ") + "\n";
-            });
-            downloadBlob("smartcs-coldstart.md", md, "text/markdown;charset=utf-8");
-        }
-
-        function downloadCSV() {
-            if (!lastResult || !lastResult.faqs || !lastResult.faqs.length) { toast("没有可导出的 FAQ"); return; }
-            const rows = [["category", "question", "answer", "priority", "similar"]];
-            lastResult.faqs.forEach((f) => {
-                rows.push([
-                    f.category || "",
-                    f.question || "",
-                    f.answer || "",
-                    f.priority || "",
-                    (f.similar || []).join("|")
-                ].map((v) => '"' + String(v).replace(/"/g, '""') + '"'));
-            });
-            downloadBlob("smartcs-coldstart-faq.csv", rows.map((r) => r.join(",")).join("\n"), "text/csv;charset=utf-8");
-        }
-
-        function copyFAQ() {
-            if (!lastResult || !lastResult.faqs || !lastResult.faqs.length) return;
-            const text = lastResult.faqs.map((f) => {
-                const sims = f.similar && f.similar.length ? "\n相似问：" + f.similar.join("；") : "";
-                return "Q：" + f.question + "\nA：" + f.answer + sims;
-            }).join("\n\n");
-            navigator.clipboard.writeText(text).then(() => toast("FAQ 已复制")).catch(() => toast("复制失败"));
-        }
-
-        const MAX_INPUT_CHARS = 120000;
-        const BINARY_HINT = /PK\x03\x04|docProps\/|xl\/|\[Content_Types\]\.xml|\x00/;
 
         function looksBinary(text) {
             if (!text) return false;
@@ -811,10 +434,43 @@
             return bad / Math.max(sample.length, 1) > 0.08;
         }
 
-        function normalizeHeader(h) {
-            return String(h || "").trim().toLowerCase().replace(/\s+/g, "");
+        function parseDialogues(raw) {
+            const text = (raw || "").trim();
+            if (!text) return { sessions: [], turns: 0, chars: 0, quality: "不足", tips: ["请粘贴至少一段完整对话"] };
+            const chunks = text
+                .split(/\n\s*(?:-{2,}|—{2,}|={2,}|会话分隔|——会话——)\s*\n/i)
+                .map((s) => s.trim()).filter(Boolean);
+            const sessions = chunks.map((chunk, idx) => {
+                const lines = chunk.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+                const turns = lines.filter((l) => /^(客户|用户|客服|坐席|系统|agent|user|bot)[:：]/i.test(l));
+                return { id: idx + 1, raw: chunk, lines: lines.length, turns: turns.length || Math.max(1, Math.floor(lines.length / 2)) };
+            });
+            const turns = sessions.reduce((a, s) => a + s.turns, 0);
+            const chars = text.replace(/\s+/g, "").length;
+            let quality = "一般";
+            const tips = [];
+            if (sessions.length >= 2 && turns >= 8 && chars >= 200) quality = "良好";
+            if (sessions.length >= 3 && turns >= 15 && chars >= 500) quality = "优秀";
+            if (chars < 120) tips.push("文本偏短，建议补充更多会话");
+            if (sessions.length < 2) tips.push("建议提供 2 段以上不同场景会话");
+            if (!/(客户|用户|客服)/.test(text)) tips.push("未检测到「客户/客服」角色标注，准确率可能下降");
+            return { sessions, turns, chars, quality, tips };
         }
 
+        function refreshInputStats() {
+            const meta = parseDialogues($("chatInput").value);
+            $("statSessions").textContent = meta.sessions.length;
+            $("statTurns").textContent = meta.turns;
+            $("statChars").textContent = meta.chars;
+            $("statQuality").textContent = meta.quality;
+            return meta;
+        }
+
+        function industryLabel(v) {
+            return ({ mobility: "智能出行", ecommerce: "电商零售", saas: "SaaS", finance: "金融保险", general: "通用客服" })[v] || "通用客服";
+        }
+
+        function normalizeHeader(h) { return String(h || "").trim().toLowerCase().replace(/\s+/g, ""); }
         function pickColumn(headers, aliases) {
             const normalized = headers.map(normalizeHeader);
             for (const alias of aliases) {
@@ -828,13 +484,11 @@
             if (!rows || !rows.length) return "";
             const header = (rows[0] || []).map((c) => String(c == null ? "" : c).trim());
             const dataRows = rows.slice(1).filter((r) => (r || []).some((c) => String(c == null ? "" : c).trim()));
-
             const qIdx = pickColumn(header, ["问题", "标准问", "标准问法", "question", "q", "faq", "用户问", "客户问", "标题"]);
             const aIdx = pickColumn(header, ["答案", "回答", "answer", "a", "回复", "标准答", "客服答"]);
             const cIdx = pickColumn(header, ["客户", "用户", "customer", "user"]);
             const sIdx = pickColumn(header, ["客服", "坐席", "agent", "bot", "机器人"]);
             const sceneIdx = pickColumn(header, ["场景", "scene", "意图", "分类", "目录", "category"]);
-
             const blocks = [];
 
             if (qIdx >= 0 && aIdx >= 0) {
@@ -851,130 +505,612 @@
                 });
                 return blocks.join("\n\n——会话——\n\n");
             }
-
             if (cIdx >= 0 && sIdx >= 0) {
                 dataRows.forEach((row) => {
                     const c = String(row[cIdx] || "").trim();
                     const s = String(row[sIdx] || "").trim();
                     if (!c && !s) return;
-                    let block = "";
-                    if (c) block += "客户：" + c + "\n";
-                    if (s) block += "客服：" + s;
-                    blocks.push(block.trim());
+                    blocks.push((c ? ("客户：" + c + "\n") : "") + (s ? ("客服：" + s) : ""));
                 });
                 return blocks.join("\n\n——会话——\n\n");
             }
-
-            // 通用：按行拼成可读文本，尽量保留表头语义
             dataRows.forEach((row, i) => {
                 const parts = [];
                 header.forEach((h, idx) => {
                     const val = String(row[idx] == null ? "" : row[idx]).trim();
-                    if (!val) return;
-                    parts.push((h || ("列" + (idx + 1))) + "：" + val);
+                    if (val) parts.push((h || ("列" + (idx + 1))) + "：" + val);
                 });
                 if (!parts.length) return;
-                // 若没有角色列，默认按 FAQ 口径包装
-                if (parts.length === 1) {
-                    blocks.push("客户：" + parts[0] + "\n客服：请结合业务背景给出标准答复。");
-                } else {
-                    blocks.push("【条目 " + (i + 1) + "】\n" + parts.join("\n"));
-                }
+                if (parts.length === 1) blocks.push("客户：" + parts[0] + "\n客服：请结合业务背景给出标准答复。");
+                else blocks.push("【条目 " + (i + 1) + "】\n" + parts.join("\n"));
             });
             return blocks.join("\n\n——会话——\n\n");
         }
 
-        async function readSpreadsheetFile(file) {
-            if (typeof XLSX === "undefined") {
-                throw new Error("Excel 解析库未加载，请刷新页面后重试");
-            }
-            const buf = await file.arrayBuffer();
-            const wb = XLSX.read(buf, { type: "array" });
-            const sheetName = wb.SheetNames[0];
-            if (!sheetName) throw new Error("Excel 中没有可用工作表");
-            const sheet = wb.Sheets[sheetName];
-            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
-            const text = sheetRowsToText(rows);
-            if (!text.trim()) throw new Error("Excel 内容为空，或未能识别可用列");
-            return {
-                text,
-                meta: "已解析工作表「" + sheetName + "」，共 " + Math.max(rows.length - 1, 0) + " 行"
-            };
-        }
-
         async function readUploadFile(file) {
             const name = (file.name || "").toLowerCase();
-            if (/\.(xlsx|xls)$/i.test(name)) {
-                return readSpreadsheetFile(file);
-            }
-            if (/\.csv$/i.test(name)) {
-                // CSV 也走 SheetJS，避免编码/分隔问题
-                if (typeof XLSX !== "undefined") {
-                    const buf = await file.arrayBuffer();
-                    const wb = XLSX.read(buf, { type: "array", codepage: 65001 });
-                    const sheet = wb.Sheets[wb.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
-                    // 若看起来像对话纯文本 CSV（单列长文本），直接拼接
-                    if (rows.length && rows.every((r) => (r || []).filter((c) => String(c).trim()).length <= 1)) {
-                        return { text: rows.map((r) => String((r && r[0]) || "").trim()).filter(Boolean).join("\n"), meta: "已解析 CSV 文本" };
-                    }
-                    const text = sheetRowsToText(rows);
-                    if (text.trim()) return { text, meta: "已解析 CSV 表格" };
+            if (/\.(xlsx|xls|csv)$/i.test(name)) {
+                if (typeof XLSX === "undefined") throw new Error("Excel 解析库未加载，请刷新页面");
+                const buf = await file.arrayBuffer();
+                const wb = XLSX.read(buf, { type: "array", codepage: 65001 });
+                const sheetName = wb.SheetNames[0];
+                if (!sheetName) throw new Error("表格中没有可用工作表");
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: "", raw: false });
+                if (/\.csv$/i.test(name) && rows.length && rows.every((r) => (r || []).filter((c) => String(c).trim()).length <= 1)) {
+                    return { text: rows.map((r) => String((r && r[0]) || "").trim()).filter(Boolean).join("\n"), meta: "已解析 CSV 文本" };
                 }
-                return { text: await file.text(), meta: "已读取 CSV" };
+                const text = sheetRowsToText(rows);
+                if (!text.trim()) throw new Error("表格内容为空，或未能识别「问题/答案」「客户/客服」列");
+                return { text, meta: "已解析「" + sheetName + "」共 " + Math.max(rows.length - 1, 0) + " 行" };
             }
-
             const text = await file.text();
-            if (looksBinary(text)) {
-                throw new Error("检测到二进制内容。请上传 .xlsx/.xls/.csv 表格，或纯文本对话记录，不要直接丢入压缩包/Office 二进制文件。");
-            }
+            if (looksBinary(text)) throw new Error("检测到二进制乱码。请上传 .xlsx/.csv，或纯文本对话，不要当 TXT 打开 Excel。");
             return { text, meta: "已读取文本文件" };
         }
 
-        function applyInputText(text, fileLabel) {
-            let body = String(text || "");
-            let note = "";
-            if (body.length > MAX_INPUT_CHARS) {
-                body = body.slice(0, MAX_INPUT_CHARS);
-                note = "（内容过长，已截断至 " + MAX_INPUT_CHARS + " 字，建议拆分后分析）";
-            }
-            $("chatInput").value = body;
-            $("fileName").textContent = fileLabel + (note ? " " + note : "");
-            refreshLocalStats();
+        function buildOfflineResult(company, brief, meta) {
+            return {
+                summary: company + " 冷启动任务完成（离线演示）：基于 " + meta.sessions.length + " 段输入，覆盖充电、配网、物流三类高频场景。",
+                scenarios: [
+                    { name: "充电异常排查", description: "车辆无法充电、充电器指示灯异常时的首问与排查路径。", frequency: "高", intent: "售后-充电", priority: "P0" },
+                    { name: "车辆配网 / 离线", description: "APP 显示离线、配网失败、蓝牙定位权限相关引导。", frequency: "高", intent: "使用指导-配网", priority: "P0" },
+                    { name: "物流催发 / 改派", description: "订单未发货查询、加急与物流方式变更。", frequency: "中", intent: "订单-物流", priority: "P1" }
+                ],
+                sops: [
+                    {
+                        scenario: "充电异常排查",
+                        goal: "快速判断接触不良、供电问题或硬件故障",
+                        steps: ["确认车型与充电方式", "检查指示灯并重新插接", "更换插座并核对充电器型号", "仍失败则引导售后检测与质保说明"],
+                        escalation: "连续失败或需换件时转售后工单"
+                    },
+                    {
+                        scenario: "车辆配网",
+                        goal: "完成 APP 绑定与联网",
+                        steps: ["确认蓝牙定位开启并靠近车辆", "进入配网并检查 VPN", "超时则重启仪表重试", "成功后检查 OTA"],
+                        escalation: "多次失败疑似硬件问题转技术支持"
+                    }
+                ],
+                faqs: [
+                    { question: "充电器红灯常亮充不进电怎么办？", answer: "请先确认充电口卡到位并更换插座；仍红灯则核对充电器型号，必要时申请售后检测，质保范围内可更换。", category: "售后/充电", priority: "P0", similar: ["充不进电红灯", "充电器一直红灯", "车上充电没反应", "电池充不上电"] },
+                    { question: "APP 显示车辆离线如何重新配网？", answer: "打开蓝牙和定位，在 APP 添加车辆并按仪表配网；保持两米内，关闭 VPN；失败可重启仪表后再试。", category: "使用指导/配网", priority: "P0", similar: ["车辆离线怎么配网", "配网一直转圈", "蓝牙配不上", "APP连不上车"] },
+                    { question: "下单多日未发货可以改加急物流吗？", answer: "可以查询仓库并备注加急；若有运费差价会短信通知，提交后一般次日揽收。", category: "订单/物流", priority: "P1", similar: ["怎么催发货", "能改顺丰吗", "订单多久发货", "想加急物流"] }
+                ],
+                risks: [
+                    { level: "中", title: "质保口径需统一", detail: "充电故障涉及质保更换时，需与售后政策对齐时效与责任边界。" },
+                    { level: "低", title: "离线演示偏差", detail: "当前为离线结果，上线前建议用真实对话在 API 模式重跑并人工审核。" }
+                ],
+                meta: { mode: "offline-demo", company, brief, generatedAt: nowISO(), input: meta }
+            };
         }
 
+        async function callAPI(messages, temperature) {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
+            try {
+                const res = await fetch("/api/deepseek", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    signal: ctrl.signal,
+                    body: JSON.stringify({
+                        password: API_PASSWORD,
+                        model: "deepseek-chat",
+                        messages,
+                        temperature: temperature == null ? 0.35 : temperature
+                    })
+                });
+                if (!res.ok) {
+                    const t = await res.text().catch(() => "");
+                    throw new Error("API " + res.status + (t ? ": " + t.slice(0, 80) : ""));
+                }
+                const data = await res.json();
+                const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+                if (!content) throw new Error("API 返回为空");
+                return content;
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        function parseJSON(text) {
+            const m = String(text).match(/\{[\s\S]*\}/);
+            if (!m) throw new Error("无法解析模型 JSON");
+            return JSON.parse(m[0]);
+        }
+
+        async function analyzeWithAPI(task, text, meta) {
+            const industry = industryLabel(task.config.industry);
+            const withSimilar = !!task.config.genSimilar;
+            const system = "你是 AI 客服冷启动架构师，服务企业「" + task.config.company + "」（行业：" + industry + "；背景：" + (task.config.brief || "未提供") + "）。\n" +
+                "任务：从客服对话中产出可直接用于机器人冷启动的结构化资产。\n" +
+                "分析重心：" + task.config.focus + "。\n只返回合法 JSON，不要 Markdown。字段：\n" +
+                "{\n  \"summary\": \"一句话总览\",\n  \"scenarios\": [{\"name\":\"\",\"description\":\"\",\"frequency\":\"高/中/低\",\"intent\":\"意图路径\",\"priority\":\"P0/P1/P2\"}],\n" +
+                "  \"sops\": [{\"scenario\":\"\",\"goal\":\"\",\"steps\":[\"...\"],\"escalation\":\"\"}],\n" +
+                "  \"faqs\": [{\"question\":\"\",\"answer\":\"\",\"category\":\"目录\",\"priority\":\"P0/P1/P2\"" + (withSimilar ? ",\"similar\":[\"口语相似问\"]" : "") + "}],\n" +
+                "  \"risks\": [{\"level\":\"高/中/低\",\"title\":\"\",\"detail\":\"\"}]\n}\n" +
+                "要求：场景按业务价值排序；SOP 可执行；FAQ 口语清晰；不要编造不存在的政策数字。";
+
+            await updateTaskProgress(task.id, "scene", 35, "正在挖掘业务场景与意图…");
+            const content = await callAPI([
+                { role: "system", content: system },
+                { role: "user", content: "以下是已解析输入（约 " + meta.sessions.length + " 段 / " + meta.turns + " 轮）：\n\n" + text.slice(0, 28000) }
+            ], 0.35);
+
+            await updateTaskProgress(task.id, "sop", 70, "正在整理 SOP、FAQ 与风险点…");
+            const data = parseJSON(content);
+            data.meta = {
+                mode: "api",
+                company: task.config.company,
+                brief: task.config.brief,
+                industry,
+                focus: task.config.focus,
+                generatedAt: nowISO(),
+                input: meta
+            };
+
+            if (withSimilar) {
+                const need = (data.faqs || []).filter((f) => !Array.isArray(f.similar) || f.similar.length < 3);
+                if (need.length) {
+                    await updateTaskProgress(task.id, "faq", 82, "正在补齐口语相似问…");
+                    try {
+                        const simRaw = await callAPI([
+                            { role: "system", content: "你为客服 FAQ 生成口语相似问。只返回 JSON：{\"items\":[{\"question\":\"原问\",\"similar\":[\"...\"]}]}" },
+                            { role: "user", content: JSON.stringify(need.map((f) => ({ question: f.question, answer: f.answer }))) }
+                        ], 0.5);
+                        const sim = parseJSON(simRaw);
+                        const map = new Map((sim.items || []).map((i) => [i.question, i.similar || []]));
+                        data.faqs = (data.faqs || []).map((f) => ({
+                            ...f,
+                            similar: (f.similar && f.similar.length ? f.similar : map.get(f.question)) || []
+                        }));
+                    } catch (_) {}
+                }
+            }
+            await updateTaskProgress(task.id, "faq", 90, "FAQ 整理完成");
+            return data;
+        }
+
+        function statusLabel(s) {
+            return ({ queued: "排队中", running: "运行中", done: "已完成", failed: "失败" })[s] || s;
+        }
+
+        function renderTaskList() {
+            const list = $("taskList");
+            const empty = $("taskListEmpty");
+            if (!tasks.length) {
+                list.innerHTML = "";
+                empty.style.display = "block";
+                return;
+            }
+            empty.style.display = "none";
+            list.innerHTML = tasks.map((t) => {
+                const active = t.id === activeTaskId ? " active" : "";
+                return '<div class="task-card' + active + '" data-id="' + esc(t.id) + '">' +
+                    '<div class="title">' + esc(t.name) + "</div>" +
+                    '<div class="meta">' +
+                    '<span class="task-status ' + esc(t.status) + '">' + esc(statusLabel(t.status)) + "</span>" +
+                    "<span>" + esc(t.config.company || "-") + "</span>" +
+                    "<span>" + esc(fmtTime(t.createdAt)) + "</span>" +
+                    (t.progress && t.progress.pct != null ? "<span>" + t.progress.pct + "%</span>" : "") +
+                    "</div></div>";
+            }).join("");
+        }
+
+        function resetPipeline() {
+            document.querySelectorAll("#pipeline .sc-step").forEach((el) => el.classList.remove("active", "done"));
+        }
+        function paintPipeline(step, state) {
+            const order = ["parse", "scene", "sop", "faq", "review"];
+            const idx = order.indexOf(step);
+            const mode = state === "done" ? "done" : (state === "active" || !state ? "active" : state);
+            document.querySelectorAll("#pipeline .sc-step").forEach((el) => {
+                const i = order.indexOf(el.dataset.step);
+                el.classList.remove("active", "done");
+                if (state === "done") {
+                    if (i <= idx) el.classList.add("done");
+                    return;
+                }
+                if (i < idx) el.classList.add("done");
+                else if (i === idx) el.classList.add(mode);
+            });
+        }
+
+        function renderDetail() {
+            const task = getTask(activeTaskId);
+            if (!task) {
+                $("detailEmpty").style.display = "block";
+                $("detailBody").style.display = "none";
+                return;
+            }
+            $("detailEmpty").style.display = "none";
+            $("detailBody").style.display = "block";
+            $("detailId").textContent = task.id + " · 创建于 " + fmtTime(task.createdAt);
+            $("detailTitle").textContent = task.name;
+            $("detailStatus").className = "task-status " + task.status;
+            $("detailStatus").textContent = statusLabel(task.status);
+            $("detailError").textContent = task.error || "";
+
+            const pct = (task.progress && task.progress.pct) || 0;
+            const msg = (task.progress && task.progress.message) || "等待开始";
+            const step = (task.progress && task.progress.step) || "parse";
+            $("progressFill").style.width = pct + "%";
+            $("progressText").textContent = msg;
+            $("progressPct").textContent = pct + "%";
+            resetPipeline();
+            if (task.status === "done") paintPipeline("review", "done");
+            else if (task.status === "failed") paintPipeline(step, "active");
+            else paintPipeline(step, task.status === "running" ? "active" : null);
+
+            if (task.status === "done" && task.result) {
+                $("resultWrap").style.display = "block";
+                renderResult(task.result);
+            } else {
+                $("resultWrap").style.display = "none";
+            }
+        }
+
+        async function updateTaskProgress(id, step, pct, message) {
+            const task = getTask(id);
+            if (!task) return;
+            task.status = "running";
+            task.progress = { step, pct, message };
+            task.updatedAt = nowISO();
+            saveTasks();
+            if (activeTaskId === id) {
+                renderTaskList();
+                renderDetail();
+            } else {
+                renderTaskList();
+            }
+            await sleep(30);
+        }
+
+        function renderResult(data) {
+            const scenarios = data.scenarios || [];
+            const sops = data.sops || [];
+            const faqs = data.faqs || [];
+            const risks = data.risks || [];
+
+            $("pane-overview").innerHTML =
+                '<div class="sc-item"><h4>冷启动摘要</h4><p>' + esc(data.summary || "已完成分析") + "</p>" +
+                '<div class="sc-chips">' +
+                '<span class="sc-chip ok">' + esc(data.meta && data.meta.mode === "offline-demo" ? "离线演示" : "API 分析") + "</span>" +
+                '<span class="sc-chip">' + scenarios.length + " 场景</span>" +
+                '<span class="sc-chip">' + sops.length + " SOP</span>" +
+                '<span class="sc-chip">' + faqs.length + " FAQ</span>" +
+                '<span class="sc-chip warn">' + risks.length + " 风险点</span>" +
+                "</div></div>" +
+                '<div class="sc-item"><h4>建议上线顺序</h4><ol>' +
+                (scenarios.slice(0, 5).map((s) => "<li><strong>" + esc(s.name) + "</strong> — " + esc(s.priority || "P1") + " / " + esc(s.frequency || "") + "</li>").join("") || "<li>暂无</li>") +
+                "</ol></div>";
+
+            $("pane-scenarios").innerHTML = scenarios.length ? scenarios.map((s) =>
+                '<div class="sc-item"><h4>' + esc(s.name) + "</h4><p>" + esc(s.description) + '</p><div class="sc-chips">' +
+                (s.intent ? '<span class="sc-chip muted">' + esc(s.intent) + "</span>" : "") +
+                (s.frequency ? '<span class="sc-chip">' + esc("频次 " + s.frequency) + "</span>" : "") +
+                (s.priority ? '<span class="sc-chip ok">' + esc(s.priority) + "</span>" : "") +
+                "</div></div>"
+            ).join("") : '<div class="sc-empty">暂无场景</div>';
+
+            $("pane-sops").innerHTML = sops.length ? sops.map((s) =>
+                '<div class="sc-item"><h4>' + esc(s.scenario) + "</h4>" +
+                (s.goal ? "<p><strong>目标：</strong>" + esc(s.goal) + "</p>" : "") +
+                "<ol>" + (s.steps || []).map((step) => "<li>" + esc(step) + "</li>").join("") + "</ol>" +
+                (s.escalation ? '<p style="margin-top:8px;"><strong>升级条件：</strong>' + esc(s.escalation) + "</p>" : "") +
+                "</div>"
+            ).join("") : '<div class="sc-empty">暂无 SOP</div>';
+
+            $("pane-faqs").innerHTML = faqs.length ? faqs.map((f) =>
+                '<div class="sc-item"><h4>Q：' + esc(f.question) + "</h4><p>A：" + esc(f.answer) + '</p><div class="sc-chips">' +
+                (f.category ? '<span class="sc-chip muted">' + esc(f.category) + "</span>" : "") +
+                (f.priority ? '<span class="sc-chip">' + esc(f.priority) + "</span>" : "") +
+                "</div>" +
+                (Array.isArray(f.similar) && f.similar.length
+                    ? '<div class="sc-similar">相似问：' + f.similar.map((x) => "<span>" + esc(x) + "</span>").join("") + "</div>"
+                    : "") +
+                "</div>"
+            ).join("") : '<div class="sc-empty">暂无 FAQ</div>';
+
+            $("pane-risks").innerHTML = risks.length ? risks.map((r) =>
+                '<div class="sc-item"><h4>' + esc(r.title || "风险项") + "</h4><p>" + esc(r.detail || "") +
+                '</p><div class="sc-chips"><span class="sc-chip warn">' + esc("等级 " + (r.level || "中")) + "</span></div></div>"
+            ).join("") : '<div class="sc-empty">未发现明显风险</div>';
+        }
+
+        function switchPane(btn) {
+            document.querySelectorAll(".sc-rtab").forEach((b) => b.classList.remove("active"));
+            document.querySelectorAll(".pane").forEach((p) => p.classList.remove("active"));
+            btn.classList.add("active");
+            $("pane-" + btn.dataset.pane).classList.add("active");
+        }
+
+        function createTaskFromForm() {
+            const text = $("chatInput").value.trim();
+            let company = $("companyName").value.trim();
+            const brief = $("companyBrief").value.trim();
+            const focus = $("focus").value;
+            const industry = $("industry").value;
+            const genSimilar = $("genSimilar").checked;
+            const offlineDemo = $("offlineDemo").checked;
+            let name = $("taskName").value.trim();
+
+            if (!text) {
+                toast("请先上传或粘贴对话/FAQ");
+                banner("缺少输入内容：请上传表格或粘贴对话后再创建任务。", "warn");
+                $("chatInput").focus();
+                return null;
+            }
+            if (!company) {
+                company = "未命名品牌";
+                $("companyName").value = company;
+            }
+            if (looksBinary(text) || /docProps\/|xl\/sharedStrings\.xml|\[Content_Types\]\.xml/i.test(text)) {
+                toast("内容像 Excel 二进制乱码，请重新上传 .xlsx/.csv");
+                banner("检测到乱码输入。请重新上传 Excel/CSV，不要用记事本直接打开 xlsx。", "err");
+                return null;
+            }
+
+            let body = text;
+            if (body.length > MAX_INPUT_CHARS) body = body.slice(0, MAX_INPUT_CHARS);
+            if (!name) {
+                name = company + "冷启动-" + fmtTime(nowISO()).replace(" ", "-");
+                $("taskName").value = name;
+            }
+
+            const meta = parseDialogues(body);
+            const task = {
+                id: uid(),
+                name,
+                status: "queued",
+                createdAt: nowISO(),
+                updatedAt: nowISO(),
+                config: { company, brief, focus, industry, genSimilar, offlineDemo },
+                input: body,
+                inputMeta: meta,
+                progress: { step: "parse", pct: 0, message: "任务已创建，排队执行中…" },
+                result: null,
+                error: ""
+            };
+            tasks.unshift(task);
+            saveTasks();
+            setActive(task.id);
+            try {
+                $("detailPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+            } catch (_) {}
+            return task;
+        }
+
+        async function runTask(taskId) {
+            if (running) { toast("已有任务在运行，请稍候"); return; }
+            const task = getTask(taskId);
+            if (!task) return;
+            running = true;
+            const btn = $("createTaskBtn");
+            const prevLabel = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "任务执行中…";
+            banner("任务「" + task.name + "」已进入执行队列，请看右侧进度条。", "");
+            setActive(taskId);
+
+            try {
+                await updateTaskProgress(taskId, "parse", 12, "正在本地解析输入…");
+                const meta = parseDialogues(task.input);
+                task.inputMeta = meta;
+
+                let data;
+                if (task.config.offlineDemo) {
+                    await updateTaskProgress(taskId, "scene", 40, "离线演示：生成场景地图…");
+                    await sleep(280);
+                    await updateTaskProgress(taskId, "sop", 65, "离线演示：整理 SOP…");
+                    await sleep(220);
+                    await updateTaskProgress(taskId, "faq", 85, "离线演示：整理 FAQ…");
+                    await sleep(220);
+                    data = buildOfflineResult(task.config.company, task.config.brief, meta);
+                } else {
+                    try {
+                        data = await analyzeWithAPI(task, task.input, meta);
+                    } catch (err) {
+                        console.warn(err);
+                        banner("API 暂不可用（" + (err && err.message ? err.message : "timeout") + "），已自动切换离线演示。", "warn");
+                        await updateTaskProgress(taskId, "scene", 45, "API 失败，切换离线演示…");
+                        await sleep(200);
+                        await updateTaskProgress(taskId, "faq", 80, "离线演示生成中…");
+                        data = buildOfflineResult(task.config.company, task.config.brief, meta);
+                        data.meta.fallbackFromApiError = String(err && err.message || err);
+                    }
+                }
+
+                await updateTaskProgress(taskId, "review", 96, "正在写入任务结果…");
+                task.result = data;
+                task.status = "done";
+                task.progress = { step: "review", pct: 100, message: "任务完成" };
+                task.finishedAt = nowISO();
+                task.error = "";
+                saveTasks();
+                renderTaskList();
+                renderDetail();
+                banner("任务完成：" + task.name + "（" + ((data.scenarios || []).length) + " 场景 / " + ((data.faqs || []).length) + " FAQ）", "ok");
+                toast("任务完成 · 可在中间列表随时回看历史");
+            } catch (e) {
+                task.status = "failed";
+                task.error = e && e.message ? e.message : String(e);
+                task.progress = { step: (task.progress && task.progress.step) || "parse", pct: (task.progress && task.progress.pct) || 0, message: "任务失败" };
+                task.updatedAt = nowISO();
+                saveTasks();
+                renderTaskList();
+                renderDetail();
+                banner("任务失败：" + task.error, "err");
+                toast("任务失败：" + task.error);
+            } finally {
+                running = false;
+                btn.disabled = false;
+                btn.textContent = prevLabel || "创建并开始任务";
+            }
+        }
+
+        function downloadBlob(filename, content, type) {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([content], { type: type }));
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        function currentResult() {
+            const t = getTask(activeTaskId);
+            return t && t.result ? t.result : null;
+        }
+
+        function downloadJSON() {
+            const r = currentResult(); if (!r) return;
+            downloadBlob("smartcs-task.json", JSON.stringify(r, null, 2), "application/json");
+        }
+        function downloadMarkdown() {
+            const r = currentResult(); if (!r) return;
+            let md = "# " + ((r.meta && r.meta.company) || "AI客服") + " 冷启动报告\n\n" + (r.summary || "") + "\n\n## 场景\n";
+            (r.scenarios || []).forEach((s) => { md += "\n### " + s.name + "\n- 描述：" + (s.description || "") + "\n- 优先级：" + (s.priority || "") + "\n"; });
+            md += "\n## SOP\n";
+            (r.sops || []).forEach((s) => {
+                md += "\n### " + s.scenario + "\n";
+                (s.steps || []).forEach((step, i) => { md += (i + 1) + ". " + step + "\n"; });
+            });
+            md += "\n## FAQ\n";
+            (r.faqs || []).forEach((f) => { md += "\n### Q：" + f.question + "\nA：" + f.answer + "\n"; });
+            downloadBlob("smartcs-task.md", md, "text/markdown;charset=utf-8");
+        }
+        function downloadCSV() {
+            const r = currentResult();
+            if (!r || !r.faqs || !r.faqs.length) { toast("没有可导出的 FAQ"); return; }
+            const rows = [["category", "question", "answer", "priority", "similar"]];
+            r.faqs.forEach((f) => {
+                rows.push([f.category || "", f.question || "", f.answer || "", f.priority || "", (f.similar || []).join("|")]
+                    .map((v) => '"' + String(v).replace(/"/g, '""') + '"'));
+            });
+            downloadBlob("smartcs-task-faq.csv", rows.map((x) => x.join(",")).join("\n"), "text/csv;charset=utf-8");
+        }
+        function copyFAQ() {
+            const r = currentResult();
+            if (!r || !r.faqs || !r.faqs.length) return;
+            const text = r.faqs.map((f) => "Q：" + f.question + "\nA：" + f.answer).join("\n\n");
+            navigator.clipboard.writeText(text).then(() => toast("FAQ 已复制")).catch(() => toast("复制失败"));
+        }
+
+        // events
         $("fileInput").addEventListener("change", async (e) => {
             const file = e.target.files && e.target.files[0];
             if (!file) return;
             $("fileName").textContent = "正在解析：" + file.name + " …";
             try {
                 const { text, meta } = await readUploadFile(file);
-                if (looksBinary(text)) {
-                    throw new Error("文件解析结果仍像二进制乱码，请改用标准 Excel/CSV，并确认表头含「问题/答案」或「客户/客服」列。");
+                if (looksBinary(text)) throw new Error("解析结果仍像乱码，请检查表头是否含问题/答案列");
+                let body = text;
+                let note = "";
+                if (body.length > MAX_INPUT_CHARS) {
+                    body = body.slice(0, MAX_INPUT_CHARS);
+                    note = "（已截断至 " + MAX_INPUT_CHARS + " 字）";
                 }
-                applyInputText(text, "已选择：" + file.name + " · " + meta);
+                $("chatInput").value = body;
+                $("fileName").textContent = "已选择：" + file.name + " · " + meta + note;
+                if (!$("taskName").value.trim()) $("taskName").value = file.name.replace(/\.[^.]+$/, "") + "-冷启动";
+                refreshInputStats();
+                banner("文件解析完成，可点击「创建并开始任务」。", "ok");
                 toast("文件解析完成");
             } catch (err) {
-                console.warn(err);
                 $("chatInput").value = "";
                 $("fileName").textContent = "";
                 $("fileInput").value = "";
-                refreshLocalStats();
-                toast("上传失败：" + (err && err.message ? err.message : "无法解析文件"));
+                refreshInputStats();
+                banner("上传失败：" + (err && err.message ? err.message : "无法解析"), "err");
+                toast("上传失败");
             }
         });
-        $("chatInput").addEventListener("input", refreshLocalStats);
-        $("analyzeBtn").addEventListener("click", startAnalyze);
-        $("sampleBtn").addEventListener("click", loadSample);
-        $("resetBtn").addEventListener("click", resetAll);
-        $("btnJson").addEventListener("click", downloadJSON);
-        $("btnMd").addEventListener("click", downloadMarkdown);
-        $("btnCsv").addEventListener("click", downloadCSV);
-        $("btnCopy").addEventListener("click", copyFAQ);
+
+        $("chatInput").addEventListener("input", refreshInputStats);
+        $("sampleBtn").addEventListener("click", () => {
+            $("companyName").value = "示例出行";
+            $("companyBrief").value = "智能两轮电动车；覆盖充电、配网、物流售后";
+            $("industry").value = "mobility";
+            $("chatInput").value = SAMPLE;
+            $("taskName").value = "示例出行-冷启动演示";
+            $("fileName").textContent = "已载入内置示例对话（3 段）";
+            $("offlineDemo").checked = true;
+            refreshInputStats();
+            banner("示例已载入。直接点「创建并开始任务」即可看到完整流程。", "ok");
+            toast("示例对话已载入");
+        });
+        $("clearInputBtn").addEventListener("click", () => {
+            $("chatInput").value = "";
+            $("fileName").textContent = "";
+            $("fileInput").value = "";
+            refreshInputStats();
+        });
+        $("createTaskBtn").addEventListener("click", async () => {
+            try {
+                banner("正在创建任务…", "");
+                const task = createTaskFromForm();
+                if (!task) return;
+                toast("任务已创建：" + task.name);
+                await runTask(task.id);
+            } catch (err) {
+                console.error(err);
+                banner("创建任务出错：" + (err && err.message ? err.message : String(err)), "err");
+                toast("创建失败，请刷新后重试");
+                running = false;
+                $("createTaskBtn").disabled = false;
+                $("createTaskBtn").textContent = "创建并开始任务";
+            }
+        });
+        $("clearTasksBtn").addEventListener("click", () => {
+            if (!tasks.length) return;
+            if (!confirm("确认清空全部任务历史？")) return;
+            tasks = [];
+            activeTaskId = null;
+            saveTasks();
+            renderTaskList();
+            renderDetail();
+            banner("任务历史已清空。", "");
+        });
+        $("taskList").addEventListener("click", (e) => {
+            const card = e.target.closest(".task-card");
+            if (!card) return;
+            setActive(card.dataset.id);
+        });
         $("resultTabs").addEventListener("click", (e) => {
             const btn = e.target.closest(".sc-rtab");
             if (btn) switchPane(btn);
         });
+        $("btnJson").addEventListener("click", downloadJSON);
+        $("btnMd").addEventListener("click", downloadMarkdown);
+        $("btnCsv").addEventListener("click", downloadCSV);
+        $("btnCopy").addEventListener("click", copyFAQ);
+        $("rerunBtn").addEventListener("click", async () => {
+            const t = getTask(activeTaskId);
+            if (!t) return;
+            t.status = "queued";
+            t.result = null;
+            t.error = "";
+            t.progress = { step: "parse", pct: 0, message: "重新排队" };
+            saveTasks();
+            await runTask(t.id);
+        });
+
+        // init
+        refreshInputStats();
+        renderTaskList();
+        renderDetail();
+        // probe API quickly to set default offline preference
+        fetch("/api/deepseek", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+            .then((r) => {
+                if (r.status === 502 || r.status >= 500) {
+                    $("offlineDemo").checked = true;
+                    banner("检测到 DeepSeek API 当前不可用，已默认勾选离线演示。你仍可创建任务并完整跑通。", "warn");
+                } else {
+                    banner("每次点击都会创建独立任务，可在中间列表跟踪进度与历史结果。", "ok");
+                }
+            })
+            .catch(() => {
+                $("offlineDemo").checked = true;
+                banner("无法连接分析 API，已默认离线演示模式。", "warn");
+            });
     })();
     </script>
 </body>

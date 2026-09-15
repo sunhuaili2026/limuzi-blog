@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务详情 - AI客服冷启动系统</title>
+    <link rel="stylesheet" href="../../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="app.css">
+    
+</head>
+<body data-page="detail">
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="nav-logo"><span class="logo-icon">◆</span><span class="logo-text">李子木</span></a>
+            <ul class="nav-menu">
+                <li><a href="/index.html" class="nav-link">首页</a></li>
+                <li><a href="/blog.html" class="nav-link">博客</a></li>
+                <li><a href="/tools.html" class="nav-link active">工具</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <section class="page-header" style="padding:110px 0 20px;">
+        <div class="container sc-shell">
+            <nav class="sc-subnav" aria-label="冷启动系统导航">
+                <a href="index.html" class="">任务台</a>
+                <a href="create.html" class="">新建分析</a>
+                <a href="task.html" class="active">任务详情</a>
+                <span class="spacer"></span>
+                <a href="create.html" class="sc-btn primary inline" style="width:auto;padding:8px 14px;">+ 新建任务</a>
+            </nav>
+            <div class="sc-banner" id="globalBanner"></div>
+            
+            <div id="detailEmpty" class="sc-empty" style="display:none;">
+                <strong>未找到任务</strong>
+                请返回任务台选择一个任务，或新建分析。
+                <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                    <a class="sc-btn primary inline" href="index.html" style="width:auto;">返回任务台</a>
+                    <a class="sc-btn inline" href="create.html" style="width:auto;">新建分析</a>
+                </div>
+            </div>
+
+            <div id="detailBody">
+                <div class="detail-top">
+                    <div>
+                        <div class="sc-breadcrumb"><a href="index.html">任务台</a> / 任务详情</div>
+                        <div class="muted" id="detailId"></div>
+                        <h1 id="detailTitle">任务详情</h1>
+                    </div>
+                    <div class="page-actions">
+                        <div id="detailStatus" class="task-status queued">queued</div>
+                        <a class="sc-btn ghost inline" href="index.html" style="width:auto;">返回任务台</a>
+                        <a class="sc-btn inline" href="create.html" style="width:auto;">再新建</a>
+                    </div>
+                </div>
+
+                <div class="sc-panel">
+                    <div class="sc-pipeline" id="pipeline">
+                        <div class="sc-step" data-step="parse"><div class="n">01</div><div class="t">对话解析</div><div class="d">清洗 / 统计</div></div>
+                        <div class="sc-step" data-step="scene"><div class="n">02</div><div class="t">场景挖掘</div><div class="d">意图 / 频次</div></div>
+                        <div class="sc-step" data-step="sop"><div class="n">03</div><div class="t">SOP 提炼</div><div class="d">可执行步骤</div></div>
+                        <div class="sc-step" data-step="faq"><div class="n">04</div><div class="t">FAQ + 相似问</div><div class="d">可导入知识</div></div>
+                        <div class="sc-step" data-step="review"><div class="n">05</div><div class="t">审核导出</div><div class="d">报告 / 资产</div></div>
+                    </div>
+                    <div class="sc-progress-bar"><div class="sc-progress-fill" id="progressFill"></div></div>
+                    <div class="sc-progress-meta">
+                        <span id="progressText">等待开始</span>
+                        <span id="progressPct">0%</span>
+                    </div>
+                    <div class="sc-hint" id="detailError" style="color:#fca5a5;"></div>
+                </div>
+
+                <div class="sc-panel" id="resultWrap" style="display:none;margin-top:16px;">
+                    <div class="sc-rtabs" id="resultTabs">
+                        <button class="sc-rtab active" type="button" data-pane="overview">总览</button>
+                        <button class="sc-rtab" type="button" data-pane="scenarios">场景</button>
+                        <button class="sc-rtab" type="button" data-pane="sops">SOP</button>
+                        <button class="sc-rtab" type="button" data-pane="faqs">FAQ</button>
+                        <button class="sc-rtab" type="button" data-pane="risks">风险点</button>
+                    </div>
+                    <div class="sc-toolbar">
+                        <button class="sc-btn" type="button" id="btnJson">下载 JSON</button>
+                        <button class="sc-btn" type="button" id="btnMd">下载 Markdown</button>
+                        <button class="sc-btn" type="button" id="btnCsv">下载 FAQ CSV</button>
+                        <button class="sc-btn" type="button" id="btnCopy">复制 FAQ</button>
+                        <button class="sc-btn accent" type="button" id="btnReport">导出客户报告</button>
+                        <button class="sc-btn ghost" type="button" id="btnPreviewReport">预览报告</button>
+                        <button class="sc-btn ghost" type="button" id="rerunBtn">重新运行</button>
+                    </div>
+                    <div class="pane active" id="pane-overview"></div>
+                    <div class="pane" id="pane-scenarios"></div>
+                    <div class="pane" id="pane-sops"></div>
+                    <div class="pane" id="pane-faqs"></div>
+                    <div class="pane" id="pane-risks"></div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container"><div class="footer-bottom"><p>&copy; 2026 李子木</p></div></div>
+    </footer>
+    <div class="sc-toast" id="toast"></div>
+    <script src="../../script.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

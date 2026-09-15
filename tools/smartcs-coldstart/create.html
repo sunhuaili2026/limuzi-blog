@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新建分析 - AI客服冷启动系统</title>
+    <link rel="stylesheet" href="../../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="app.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body data-page="create">
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="nav-logo"><span class="logo-icon">◆</span><span class="logo-text">李子木</span></a>
+            <ul class="nav-menu">
+                <li><a href="/index.html" class="nav-link">首页</a></li>
+                <li><a href="/blog.html" class="nav-link">博客</a></li>
+                <li><a href="/tools.html" class="nav-link active">工具</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <section class="page-header" style="padding:110px 0 20px;">
+        <div class="container sc-shell">
+            <nav class="sc-subnav" aria-label="冷启动系统导航">
+                <a href="index.html" class="">任务台</a>
+                <a href="create.html" class="active">新建分析</a>
+                <a href="task.html" class="">任务详情</a>
+                <span class="spacer"></span>
+                <a href="create.html" class="sc-btn primary inline" style="width:auto;padding:8px 14px;">+ 新建任务</a>
+            </nav>
+            <div class="sc-banner" id="globalBanner"></div>
+            
+            <div class="sc-page-hero">
+                <div class="sc-breadcrumb"><a href="index.html">任务台</a> / 新建分析</div>
+                <h1>新建分析任务</h1>
+                <p>配置品牌信息并上传对话语料。创建后会自动跳转到任务详情页，实时查看分批进度与结果。</p>
+            </div>
+
+            <div class="create-layout">
+                <div class="sc-panel">
+                    <h3>任务配置</h3>
+                    <div class="sc-field">
+                        <label for="taskName">任务名称</label>
+                        <input id="taskName" type="text" placeholder="例如：充电售后冷启动-0915">
+                    </div>
+                    <div class="sc-field">
+                        <label for="companyName">品牌名称</label>
+                        <input id="companyName" type="text" placeholder="例如：示例出行（可留空）">
+                    </div>
+                    <div class="sc-field">
+                        <label for="industry">行业</label>
+                        <select id="industry">
+                            <option value="mobility">智能出行 / 两轮电动</option>
+                            <option value="ecommerce">电商零售</option>
+                            <option value="saas">SaaS / 软件</option>
+                            <option value="finance">金融保险</option>
+                            <option value="general">通用客服</option>
+                        </select>
+                    </div>
+                    <div class="sc-field">
+                        <label for="companyBrief">业务背景</label>
+                        <textarea id="companyBrief" placeholder="产品线、售后渠道、常见问题范围…"></textarea>
+                    </div>
+                    <div class="sc-field">
+                        <label for="focus">分析重心</label>
+                        <select id="focus">
+                            <option value="balanced">均衡（场景 + SOP + FAQ）</option>
+                            <option value="sop">偏流程（SOP 优先）</option>
+                            <option value="faq">偏知识（FAQ 优先）</option>
+                        </select>
+                    </div>
+                    <label class="sc-check"><input type="checkbox" id="genSimilar" checked><span>为 FAQ 生成口语相似问</span></label>
+                    <label class="sc-check"><input type="checkbox" id="offlineDemo" checked><span>离线演示优先（API 不可用时也可用）</span></label>
+
+                    <label class="sc-file" for="fileInput">
+                        上传 CSV / TXT / JSON / Excel
+                        <input type="file" id="fileInput" accept=".csv,.txt,.json,.md,.xlsx,.xls">
+                    </label>
+                    <div id="fileName" class="sc-hint"></div>
+
+                    <div class="sc-field" style="margin-top:12px;">
+                        <label>输入内容</label>
+                        <div id="inputSummary" class="sc-hint">尚未载入内容。请上传 Excel/CSV，或点击「载入示例对话」。</div>
+                        <textarea id="chatInput" hidden aria-hidden="true"></textarea>
+                    </div>
+
+                    <div class="sc-stats" id="inputStats">
+                        <div class="sc-stat"><div class="num" id="statSessions">0</div><div class="lbl">会话段</div></div>
+                        <div class="sc-stat"><div class="num" id="statTurns">0</div><div class="lbl">轮次</div></div>
+                        <div class="sc-stat"><div class="num" id="statChars">0</div><div class="lbl">字符</div></div>
+                        <div class="sc-stat"><div class="num" id="statQuality">-</div><div class="lbl">质量</div></div>
+                    </div>
+
+                    <div class="sc-actions">
+                        <button class="sc-btn primary" id="createTaskBtn" type="button">创建并开始任务</button>
+                        <button class="sc-btn" id="sampleBtn" type="button">载入示例对话</button>
+                        <button class="sc-btn ghost" id="clearInputBtn" type="button">清空输入</button>
+                    </div>
+                </div>
+
+                <aside class="sc-panel create-side">
+                    <h3>流程说明</h3>
+                    <div class="sc-item">
+                        <h4>1. 配置品牌</h4>
+                        <p>填写品牌、行业与业务背景，便于输出贴合业务的场景与口径。</p>
+                    </div>
+                    <div class="sc-item">
+                        <h4>2. 上传语料</h4>
+                        <p>支持 Excel/CSV/对话文本。大文件会自动分批，不再硬截断。</p>
+                    </div>
+                    <div class="sc-item">
+                        <h4>3. 生成任务</h4>
+                        <p>创建后跳转详情页，跟踪解析 → 场景 → SOP → FAQ → 导出。</p>
+                    </div>
+                    <div class="sc-item">
+                        <h4>4. 交付客户</h4>
+                        <p>在详情页导出静态可视化报告，可直接发给客户打开或打印。</p>
+                    </div>
+                </aside>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container"><div class="footer-bottom"><p>&copy; 2026 李子木</p></div></div>
+    </footer>
+    <div class="sc-toast" id="toast"></div>
+    <script src="../../script.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

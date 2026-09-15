@@ -6,6 +6,7 @@
     <title>AI客服冷启动系统 - 李子木</title>
     <link rel="stylesheet" href="../../style.css">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --sc-line: rgba(148, 163, 184, 0.16);
@@ -218,8 +219,8 @@
                     <label class="sc-check"><input type="checkbox" id="offlineDemo"><span>离线演示模式（不调用 API）</span></label>
 
                     <label class="sc-file" for="fileInput">
-                        上传 CSV / TXT / JSON 对话记录
-                        <input type="file" id="fileInput" accept=".csv,.txt,.json,.md">
+                        上传 CSV / TXT / JSON / Excel 对话或 FAQ
+                        <input type="file" id="fileInput" accept=".csv,.txt,.json,.md,.xlsx,.xls">
                     </label>
                     <div id="fileName" class="sc-hint"></div>
 
@@ -228,7 +229,7 @@
                         <button class="sc-btn" id="sampleBtn" type="button">载入示例对话</button>
                         <button class="sc-btn ghost" id="resetBtn" type="button">清空重置</button>
                     </div>
-                    <p class="sc-hint">建议粘贴多通完整会话。系统会先做本地解析，再分阶段调用模型。</p>
+                    <p class="sc-hint">支持对话文本，或带「问题/答案」「客户/客服」表头的 Excel/CSV。勿把 .xlsx 当 TXT 打开。</p>
                 </aside>
 
                 <main class="sc-stack">
@@ -671,6 +672,14 @@
 
             if (!text) { toast("请先上传或粘贴对话"); return; }
             if (!company) { toast("请填写品牌名称"); return; }
+            if (looksBinary(text) || /docProps\/|xl\/sharedStrings\.xml|\[Content_Types\]\.xml/i.test(text)) {
+                toast("当前内容像 Excel 二进制乱码。请重新上传 .xlsx/.csv，或粘贴纯文本对话。");
+                return;
+            }
+            if (text.length > MAX_INPUT_CHARS * 1.2) {
+                toast("输入过长，请先拆分文件或重新上传（系统会自动截断超大表格）");
+                return;
+            }
 
             const btn = $("analyzeBtn");
             btn.disabled = true;
@@ -787,12 +796,172 @@
             navigator.clipboard.writeText(text).then(() => toast("FAQ 已复制")).catch(() => toast("复制失败"));
         }
 
+        const MAX_INPUT_CHARS = 120000;
+        const BINARY_HINT = /PK\x03\x04|docProps\/|xl\/|\[Content_Types\]\.xml|\x00/;
+
+        function looksBinary(text) {
+            if (!text) return false;
+            if (BINARY_HINT.test(text.slice(0, 2000))) return true;
+            let bad = 0;
+            const sample = text.slice(0, 4000);
+            for (let i = 0; i < sample.length; i++) {
+                const c = sample.charCodeAt(i);
+                if (c === 0 || (c < 9) || (c > 14 && c < 32)) bad++;
+            }
+            return bad / Math.max(sample.length, 1) > 0.08;
+        }
+
+        function normalizeHeader(h) {
+            return String(h || "").trim().toLowerCase().replace(/\s+/g, "");
+        }
+
+        function pickColumn(headers, aliases) {
+            const normalized = headers.map(normalizeHeader);
+            for (const alias of aliases) {
+                const idx = normalized.findIndex((h) => h === alias || h.includes(alias));
+                if (idx >= 0) return idx;
+            }
+            return -1;
+        }
+
+        function sheetRowsToText(rows) {
+            if (!rows || !rows.length) return "";
+            const header = (rows[0] || []).map((c) => String(c == null ? "" : c).trim());
+            const dataRows = rows.slice(1).filter((r) => (r || []).some((c) => String(c == null ? "" : c).trim()));
+
+            const qIdx = pickColumn(header, ["问题", "标准问", "标准问法", "question", "q", "faq", "用户问", "客户问", "标题"]);
+            const aIdx = pickColumn(header, ["答案", "回答", "answer", "a", "回复", "标准答", "客服答"]);
+            const cIdx = pickColumn(header, ["客户", "用户", "customer", "user"]);
+            const sIdx = pickColumn(header, ["客服", "坐席", "agent", "bot", "机器人"]);
+            const sceneIdx = pickColumn(header, ["场景", "scene", "意图", "分类", "目录", "category"]);
+
+            const blocks = [];
+
+            if (qIdx >= 0 && aIdx >= 0) {
+                dataRows.forEach((row, i) => {
+                    const q = String(row[qIdx] || "").trim();
+                    const a = String(row[aIdx] || "").trim();
+                    if (!q && !a) return;
+                    const scene = sceneIdx >= 0 ? String(row[sceneIdx] || "").trim() : "";
+                    let block = "";
+                    if (scene) block += "【场景】" + scene + "\n";
+                    block += "客户：" + (q || ("问题" + (i + 1))) + "\n";
+                    block += "客服：" + (a || "（暂无标准答）");
+                    blocks.push(block);
+                });
+                return blocks.join("\n\n——会话——\n\n");
+            }
+
+            if (cIdx >= 0 && sIdx >= 0) {
+                dataRows.forEach((row) => {
+                    const c = String(row[cIdx] || "").trim();
+                    const s = String(row[sIdx] || "").trim();
+                    if (!c && !s) return;
+                    let block = "";
+                    if (c) block += "客户：" + c + "\n";
+                    if (s) block += "客服：" + s;
+                    blocks.push(block.trim());
+                });
+                return blocks.join("\n\n——会话——\n\n");
+            }
+
+            // 通用：按行拼成可读文本，尽量保留表头语义
+            dataRows.forEach((row, i) => {
+                const parts = [];
+                header.forEach((h, idx) => {
+                    const val = String(row[idx] == null ? "" : row[idx]).trim();
+                    if (!val) return;
+                    parts.push((h || ("列" + (idx + 1))) + "：" + val);
+                });
+                if (!parts.length) return;
+                // 若没有角色列，默认按 FAQ 口径包装
+                if (parts.length === 1) {
+                    blocks.push("客户：" + parts[0] + "\n客服：请结合业务背景给出标准答复。");
+                } else {
+                    blocks.push("【条目 " + (i + 1) + "】\n" + parts.join("\n"));
+                }
+            });
+            return blocks.join("\n\n——会话——\n\n");
+        }
+
+        async function readSpreadsheetFile(file) {
+            if (typeof XLSX === "undefined") {
+                throw new Error("Excel 解析库未加载，请刷新页面后重试");
+            }
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: "array" });
+            const sheetName = wb.SheetNames[0];
+            if (!sheetName) throw new Error("Excel 中没有可用工作表");
+            const sheet = wb.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+            const text = sheetRowsToText(rows);
+            if (!text.trim()) throw new Error("Excel 内容为空，或未能识别可用列");
+            return {
+                text,
+                meta: "已解析工作表「" + sheetName + "」，共 " + Math.max(rows.length - 1, 0) + " 行"
+            };
+        }
+
+        async function readUploadFile(file) {
+            const name = (file.name || "").toLowerCase();
+            if (/\.(xlsx|xls)$/i.test(name)) {
+                return readSpreadsheetFile(file);
+            }
+            if (/\.csv$/i.test(name)) {
+                // CSV 也走 SheetJS，避免编码/分隔问题
+                if (typeof XLSX !== "undefined") {
+                    const buf = await file.arrayBuffer();
+                    const wb = XLSX.read(buf, { type: "array", codepage: 65001 });
+                    const sheet = wb.Sheets[wb.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+                    // 若看起来像对话纯文本 CSV（单列长文本），直接拼接
+                    if (rows.length && rows.every((r) => (r || []).filter((c) => String(c).trim()).length <= 1)) {
+                        return { text: rows.map((r) => String((r && r[0]) || "").trim()).filter(Boolean).join("\n"), meta: "已解析 CSV 文本" };
+                    }
+                    const text = sheetRowsToText(rows);
+                    if (text.trim()) return { text, meta: "已解析 CSV 表格" };
+                }
+                return { text: await file.text(), meta: "已读取 CSV" };
+            }
+
+            const text = await file.text();
+            if (looksBinary(text)) {
+                throw new Error("检测到二进制内容。请上传 .xlsx/.xls/.csv 表格，或纯文本对话记录，不要直接丢入压缩包/Office 二进制文件。");
+            }
+            return { text, meta: "已读取文本文件" };
+        }
+
+        function applyInputText(text, fileLabel) {
+            let body = String(text || "");
+            let note = "";
+            if (body.length > MAX_INPUT_CHARS) {
+                body = body.slice(0, MAX_INPUT_CHARS);
+                note = "（内容过长，已截断至 " + MAX_INPUT_CHARS + " 字，建议拆分后分析）";
+            }
+            $("chatInput").value = body;
+            $("fileName").textContent = fileLabel + (note ? " " + note : "");
+            refreshLocalStats();
+        }
+
         $("fileInput").addEventListener("change", async (e) => {
             const file = e.target.files && e.target.files[0];
             if (!file) return;
-            $("fileName").textContent = "已选择：" + file.name;
-            $("chatInput").value = await file.text();
-            refreshLocalStats();
+            $("fileName").textContent = "正在解析：" + file.name + " …";
+            try {
+                const { text, meta } = await readUploadFile(file);
+                if (looksBinary(text)) {
+                    throw new Error("文件解析结果仍像二进制乱码，请改用标准 Excel/CSV，并确认表头含「问题/答案」或「客户/客服」列。");
+                }
+                applyInputText(text, "已选择：" + file.name + " · " + meta);
+                toast("文件解析完成");
+            } catch (err) {
+                console.warn(err);
+                $("chatInput").value = "";
+                $("fileName").textContent = "";
+                $("fileInput").value = "";
+                refreshLocalStats();
+                toast("上传失败：" + (err && err.message ? err.message : "无法解析文件"));
+            }
         });
         $("chatInput").addEventListener("input", refreshLocalStats);
         $("analyzeBtn").addEventListener("click", startAnalyze);

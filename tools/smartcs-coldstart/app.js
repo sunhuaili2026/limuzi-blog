@@ -507,10 +507,26 @@ const API_PASSWORD = "limuzi2025";
         return ({ queued: "排队中", running: "运行中", done: "已完成", failed: "失败" })[s] || s;
     }
 
+    function renderRecentList() {
+        const el = $("recentList");
+        if (!el) return;
+        if (!tasks.length) {
+            el.innerHTML = '<div class="muted" style="padding:4px 10px;">暂无任务</div>';
+            return;
+        }
+        el.innerHTML = tasks.slice(0, 5).map((t) => {
+            return '<a href="task.html?id=' + encodeURIComponent(t.id) + '">' +
+                '<div class="t">' + esc(t.name) + '</div>' +
+                '<div class="m">' + esc(statusLabel(t.status)) + ' · ' + esc(fmtTime(t.updatedAt || t.createdAt)) + '</div>' +
+                '</a>';
+        }).join("");
+    }
+
     function renderTaskList() {
         const table = $("taskTable");
         const list = $("taskList");
         const empty = $("taskListEmpty");
+        const wrap = $("taskTableWrap");
         const doneCount = tasks.filter((t) => t.status === "done").length;
         const runCount = tasks.filter((t) => t.status === "running" || t.status === "queued").length;
         if ($("dashTotal")) $("dashTotal").textContent = String(tasks.length);
@@ -523,20 +539,23 @@ const API_PASSWORD = "limuzi2025";
             if (table) table.innerHTML = "";
             if (list) list.innerHTML = "";
             if (empty) empty.style.display = "block";
+            if (wrap) wrap.setAttribute("data-empty", "1");
+            renderRecentList();
             return;
         }
         if (empty) empty.style.display = "none";
+        if (wrap) wrap.setAttribute("data-empty", "0");
 
         const html = tasks.map((t) => {
             const pct = (t.progress && t.progress.pct != null) ? t.progress.pct : 0;
             const company = (t.config && t.config.company) || "-";
             if (table) {
-                return '<a class="task-row" href="task.html?id=' + encodeURIComponent(t.id) + '">' +
-                    '<div><div class="title">' + esc(t.name) + '</div><div class="sub">' + esc(t.id) + '</div></div>' +
-                    '<div class="cell">' + esc(company) + '</div>' +
+                return '<a class="saas-table-row" href="task.html?id=' + encodeURIComponent(t.id) + '">' +
+                    '<div><div class="title">' + esc(t.name) + '</div><div class="sub">' + esc(company) + ' · ' + esc(t.id) + '</div></div>' +
                     '<div class="cell"><span class="task-status ' + esc(t.status) + '">' + esc(statusLabel(t.status)) + '</span></div>' +
-                    '<div class="cell">' + esc(fmtTime(t.createdAt)) + (pct ? (' · ' + pct + '%') : '') + '</div>' +
-                    '<div class="cell">查看 →</div></a>';
+                    '<div class="cell">' + (pct || 0) + '%</div>' +
+                    '<div class="cell">' + esc(fmtTime(t.updatedAt || t.createdAt)) + '</div>' +
+                    '<div class="go">打开 →</div></a>';
             }
             const active = t.id === activeTaskId ? " active" : "";
             return '<div class="task-card' + active + '" data-id="' + esc(t.id) + '">' +
@@ -551,6 +570,7 @@ const API_PASSWORD = "limuzi2025";
 
         if (table) table.innerHTML = html;
         if (list) list.innerHTML = html;
+        renderRecentList();
     }
 
     function resetPipeline() {
@@ -583,6 +603,7 @@ const API_PASSWORD = "limuzi2025";
         $("detailBody").style.display = "block";
         $("detailId").textContent = task.id + " · 创建于 " + fmtTime(task.createdAt);
         $("detailTitle").textContent = task.name;
+        if ($("topbarTitle")) $("topbarTitle").textContent = task.name;
         $("detailStatus").className = "task-status " + task.status;
         $("detailStatus").textContent = statusLabel(task.status);
         $("detailError").textContent = task.error || "";
@@ -1237,7 +1258,78 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:v
 
 
 
+    function focusLabel(v) {
+        return ({ balanced: "均衡（场景+SOP+FAQ）", sop: "偏流程（SOP）", faq: "偏知识（FAQ）" })[v] || v || "均衡";
+    }
+
+    function updateConfirmSummary() {
+        const company = ($("companyName") && $("companyName").value.trim()) || "未命名品牌";
+        const industry = $("industry") ? industryLabel($("industry").value) : "—";
+        const focus = $("focus") ? focusLabel($("focus").value) : "—";
+        const meta = refreshInputStats();
+        const offline = $("offlineDemo") && $("offlineDemo").checked;
+        const name = ($("taskName") && $("taskName").value.trim()) || (company + "冷启动");
+        if ($("confirmBrand")) $("confirmBrand").textContent = company;
+        if ($("confirmScope")) $("confirmScope").textContent = industry + " · " + focus;
+        if ($("confirmScale")) {
+            $("confirmScale").textContent = meta.chars
+                ? (meta.sessions.length + " 段 / " + meta.turns + " 轮 / " + meta.chars + " 字")
+                : "尚未导入对话";
+        }
+        if ($("confirmMode")) $("confirmMode").textContent = offline ? "离线演示" : "在线 API 分析";
+        if ($("confirmName")) $("confirmName").textContent = name;
+    }
+
+    function setWizardStep(step) {
+        const total = 3;
+        const n = Math.max(1, Math.min(total, step));
+        document.querySelectorAll("[data-wizard-pane]").forEach((pane) => {
+            const id = Number(pane.getAttribute("data-wizard-pane"));
+            pane.classList.toggle("active", id === n);
+        });
+        document.querySelectorAll("[data-step-indicator]").forEach((el) => {
+            const id = Number(el.getAttribute("data-step-indicator"));
+            el.classList.toggle("active", id === n);
+            el.classList.toggle("done", id < n);
+        });
+        const back = $("wizardBackBtn");
+        const next = $("wizardNextBtn");
+        const create = $("createTaskBtn");
+        if (back) back.style.visibility = n > 1 ? "visible" : "hidden";
+        if (next) next.style.display = n < total ? "inline-flex" : "none";
+        if (create) create.style.display = n === total ? "inline-flex" : "none";
+        if (n === total) updateConfirmSummary();
+        setWizardStep._n = n;
+    }
+
     function bindCreatePage() {
+        let wizardStep = 1;
+        setWizardStep(1);
+
+        on("wizardBackBtn", "click", () => {
+            wizardStep = Math.max(1, wizardStep - 1);
+            setWizardStep(wizardStep);
+        });
+        on("wizardNextBtn", "click", () => {
+            if (wizardStep === 1) {
+                wizardStep = 2;
+                setWizardStep(wizardStep);
+                banner("第二步：上传对话资产，或载入示例快速体验。", "ok");
+                return;
+            }
+            if (wizardStep === 2) {
+                const text = ($("chatInput") && $("chatInput").value.trim()) || "";
+                if (!text) {
+                    toast("请先上传文件或载入示例对话");
+                    banner("还没有对话内容：请上传 Excel/CSV，或点击「载入示例对话」。", "warn");
+                    return;
+                }
+                wizardStep = 3;
+                setWizardStep(wizardStep);
+                banner("确认摘要后，点击「创建并开始任务」。", "ok");
+            }
+        });
+
         on("fileInput", "change", async (e) => {
             const file = e.target.files && e.target.files[0];
             if (!file) return;
@@ -1257,7 +1349,8 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:v
                 $("fileName").textContent = "已选择：" + file.name + " · " + meta + (note ? " " + note : "");
                 if ($("taskName") && !$("taskName").value.trim()) $("taskName").value = file.name.replace(/\.[^.]+$/, "") + "-冷启动";
                 refreshInputStats();
-                banner("文件解析完成，可点击「创建并开始任务」。", "ok");
+                updateConfirmSummary();
+                banner("文件解析完成。可进入下一步确认并启动。", "ok");
                 toast("文件解析完成");
             } catch (err) {
                 if ($("chatInput")) $("chatInput").value = "";
@@ -1268,7 +1361,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:v
                 toast("上传失败");
             }
         });
-        on("chatInput", "input", refreshInputStats);
+        on("chatInput", "input", () => { refreshInputStats(); updateConfirmSummary(); });
         on("sampleBtn", "click", () => {
             if ($("companyName")) $("companyName").value = "示例出行";
             if ($("companyBrief")) $("companyBrief").value = "智能两轮电动车；覆盖充电、配网、物流售后";
@@ -1278,7 +1371,8 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:v
             if ($("fileName")) $("fileName").textContent = "已载入内置示例对话（3 段）";
             if ($("offlineDemo")) $("offlineDemo").checked = true;
             refreshInputStats();
-            banner("示例已载入。直接点「创建并开始任务」即可看到完整流程。", "ok");
+            updateConfirmSummary();
+            banner("示例已载入。可进入下一步确认并启动任务。", "ok");
             toast("示例对话已载入");
         });
         on("clearInputBtn", "click", () => {
@@ -1286,14 +1380,23 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:v
             if ($("fileName")) $("fileName").textContent = "";
             if ($("fileInput")) $("fileInput").value = "";
             refreshInputStats();
+            updateConfirmSummary();
+        });
+        ["companyName", "taskName", "industry", "focus", "companyBrief", "offlineDemo", "genSimilar"].forEach((id) => {
+            const el = $(id);
+            if (!el) return;
+            el.addEventListener("change", updateConfirmSummary);
+            el.addEventListener("input", updateConfirmSummary);
         });
         on("createTaskBtn", "click", async () => {
             try {
                 banner("正在创建任务…", "");
                 const task = createTaskFromForm();
-                if (!task) return;
+                if (!task) {
+                    if (!(($("chatInput") && $("chatInput").value.trim()))) setWizardStep(2);
+                    return;
+                }
                 toast("任务已创建：" + task.name);
-                // jump to detail page and continue running there
                 sessionStorage.setItem("smartcs_autorun", task.id);
                 location.href = "task.html?id=" + encodeURIComponent(task.id);
             } catch (err) {
@@ -1309,7 +1412,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:v
                     $("offlineDemo").checked = true;
                     banner("检测到 DeepSeek API 当前不可用，已默认勾选离线演示。", "warn");
                 } else {
-                    banner("填写配置并上传对话后，将创建独立分析任务。", "ok");
+                    banner("按三步向导完成创建：品牌 → 语料 → 确认启动。", "ok");
                 }
             })
             .catch(() => {

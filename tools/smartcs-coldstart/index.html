@@ -1,75 +1,131 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>任务台 - AI客服冷启动系统</title>
-    <link rel="stylesheet" href="../../style.css">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="app.css">
-    
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>工作台 · AI客服冷启动系统</title>
+  <meta name="description" content="AI客服冷启动系统工作台：管理分析任务、跟踪进度、沉淀知识资产。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./app.css" />
 </head>
 <body data-page="dashboard">
-    <nav class="navbar" id="navbar">
-        <div class="nav-container">
-            <a href="/index.html" class="nav-logo"><span class="logo-icon">◆</span><span class="logo-text">李子木</span></a>
-            <ul class="nav-menu">
-                <li><a href="/index.html" class="nav-link">首页</a></li>
-                <li><a href="/blog.html" class="nav-link">博客</a></li>
-                <li><a href="/tools.html" class="nav-link active">工具</a></li>
-            </ul>
-            <button class="nav-toggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+  <a class="skip-link" href="#main">跳到主内容</a>
+  <div class="app-shell">
+    <aside class="app-sidebar" aria-label="主导航">
+      <a class="app-brand" href="./index.html">
+        <div class="app-brand-mark">CS</div>
+        <div class="app-brand-text">
+          <strong>AI客服冷启动</strong>
+          <span>Cold Start Studio</span>
         </div>
-    </nav>
+      </a>
+      <nav class="app-nav">
+        <a class="active" href="./index.html" aria-current="page"><span class="ico">◆</span>工作台</a>
+        <a href="./create.html"><span class="ico">＋</span>新建分析</a>
+        <a href="./create.html"><span class="ico">▣</span>知识产出</a>
+      </nav>
+      <div class="app-side-block">
+        <h4>最近任务</h4>
+        <div class="recent-list" id="recentList"></div>
+      </div>
+      <div class="app-side-foot">
+        任务本地保存 · 离线可演示<br />
+        <a href="/tools.html">← 返回工具箱</a>
+      </div>
+    </aside>
 
-    <section class="page-header" style="padding:110px 0 20px;">
-        <div class="container sc-shell">
-            <nav class="sc-subnav" aria-label="冷启动系统导航">
-                <a href="index.html" class="active">任务台</a>
-                <a href="create.html" class="">新建分析</a>
-                <a href="task.html" class="">任务详情</a>
-                <span class="spacer"></span>
-                <a href="create.html" class="sc-btn primary inline" style="width:auto;padding:8px 14px;">+ 新建任务</a>
-            </nav>
-            <div class="sc-banner" id="globalBanner"></div>
-            
-            <div class="sc-page-hero">
-                <div class="sc-breadcrumb"><a href="/tools.html">工具</a> / AI客服冷启动系统</div>
-                <h1>任务台</h1>
-                <p>在这里管理所有冷启动分析任务：查看进度、打开详情、导出客户报告。新建分析请进入独立页面，避免工作台拥挤。</p>
-            </div>
-
-            <div class="dash-stats">
-                <div class="dash-stat"><div class="n" id="dashTotal">0</div><div class="l">全部任务</div></div>
-                <div class="dash-stat"><div class="n" id="dashDone">0</div><div class="l">已完成</div></div>
-                <div class="dash-stat"><div class="n" id="dashRunning">0</div><div class="l">进行中</div></div>
-                <div class="dash-stat"><div class="n" id="dashFaqs">0</div><div class="l">累计 FAQ</div></div>
-            </div>
-
-            <div class="sc-panel">
-                <div class="dash-head">
-                    <h2>任务列表</h2>
-                    <div class="page-actions">
-                        <a class="sc-btn primary inline" href="create.html" style="width:auto;">新建分析</a>
-                        <button class="sc-btn ghost danger" id="clearTasksBtn" type="button">清空历史</button>
-                    </div>
-                </div>
-                <div id="taskTable" class="task-table"></div>
-                <div class="sc-empty" id="taskListEmpty">
-                    <strong>还没有分析任务</strong>
-                    去「新建分析」上传对话 / FAQ，或载入示例跑通一次完整流程。
-                    <div style="margin-top:14px;"><a class="sc-btn primary inline" href="create.html" style="width:auto;">开始新建分析</a></div>
-                </div>
-            </div>
-
+    <div class="app-main">
+      <header class="app-topbar">
+        <div class="app-topbar-left">
+          <div class="app-crumb"><a href="/tools.html">工具</a> / AI客服冷启动</div>
+          <h1>工作台</h1>
         </div>
-    </section>
+        <div class="app-topbar-actions">
+          <a class="sc-btn ghost" href="/tools.html">工具箱</a>
+          <a class="sc-btn primary" href="./create.html">+ 新建分析</a>
+        </div>
+      </header>
 
-    <footer class="footer">
-        <div class="container"><div class="footer-bottom"><p>&copy; 2026 李子木</p></div></div>
-    </footer>
-    <div class="sc-toast" id="toast"></div>
-    <script src="../../script.js"></script>
-    <script src="app.js"></script>
+      <main id="main" class="app-content">
+        <div class="sc-banner" id="globalBanner"></div>
+
+        <section class="kpi-grid" aria-label="关键指标">
+          <article class="kpi-card">
+            <div class="n" id="dashTotal">0</div>
+            <div class="l">全部任务</div>
+            <div class="s">本地工作区累计</div>
+          </article>
+          <article class="kpi-card">
+            <div class="n" id="dashDone">0</div>
+            <div class="l">已完成</div>
+            <div class="s">可导出知识资产</div>
+          </article>
+          <article class="kpi-card">
+            <div class="n" id="dashRunning">0</div>
+            <div class="l">进行中</div>
+            <div class="s">排队 / 分析中</div>
+          </article>
+          <article class="kpi-card">
+            <div class="n" id="dashFaqs">0</div>
+            <div class="l">FAQ 沉淀</div>
+            <div class="s">完成任务累计条目</div>
+          </article>
+        </section>
+
+        <section class="sc-panel">
+          <div class="panel-head">
+            <h3>任务列表</h3>
+            <div class="app-topbar-actions">
+              <button type="button" class="sc-btn ghost danger" id="clearTasksBtn">清空全部</button>
+              <a class="sc-btn primary" href="./create.html">新建分析</a>
+            </div>
+          </div>
+
+          <div class="sc-empty" id="taskListEmpty" style="display:none;">
+            <div class="empty-ico">📋</div>
+            <strong>还没有分析任务</strong>
+            创建第一个任务：上传客服对话记录，系统将自动生成场景、话术、FAQ 与风险清单。
+            <div style="margin-top:14px;">
+              <a class="sc-btn primary" href="./create.html">开始第一次分析</a>
+            </div>
+          </div>
+
+          <div class="saas-table" id="taskTableWrap">
+            <div class="saas-table-head">
+              <div>任务</div>
+              <div>状态</div>
+              <div>进度</div>
+              <div>更新时间</div>
+              <div></div>
+            </div>
+            <div id="taskTable"></div>
+          </div>
+        </section>
+
+        <section class="sc-panel" style="margin-top:16px;">
+          <h3>产品能力</h3>
+          <div class="capability-grid">
+            <article class="sc-item">
+              <h4>对话资产入库</h4>
+              <p>支持粘贴、TXT / CSV / Excel 上传，大文件自动分批处理。</p>
+            </article>
+            <article class="sc-item">
+              <h4>结构化知识产出</h4>
+              <p>场景、SOP、FAQ、风险清单一次生成，可直接导入知识库。</p>
+            </article>
+            <article class="sc-item">
+              <h4>客户可视化报告</h4>
+              <p>一键导出静态 HTML 报告，便于评审会与项目验收演示。</p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="sc-toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js"></script>
 </body>
 </html>

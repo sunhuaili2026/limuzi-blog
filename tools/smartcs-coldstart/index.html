@@ -174,6 +174,34 @@
         .sc-toast.show { display: block; animation: scIn .25s ease; }
         @keyframes scIn { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none; } }
         .muted { color: var(--text-muted); font-size: 12px; }
+        .ov-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; }
+        @media (max-width: 900px) { .ov-grid { grid-template-columns: 1fr; } }
+        .ov-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+        @media (max-width: 720px) { .ov-kpis { grid-template-columns: 1fr 1fr; } }
+        .ov-kpi {
+            border: 1px solid var(--sc-line); border-radius: 12px; padding: 12px;
+            background: linear-gradient(180deg, rgba(56,189,248,.08), rgba(15,23,42,.35));
+        }
+        .ov-kpi .v { font-family: "IBM Plex Mono", monospace; font-size: 22px; font-weight: 700; color: var(--sc-cyan); }
+        .ov-kpi .l { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+        .ov-bar { height: 8px; border-radius: 999px; background: rgba(148,163,184,.15); overflow: hidden; margin-top: 6px; }
+        .ov-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #38bdf8, #34d399); }
+        .ov-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-secondary); margin-top: 8px; }
+        .ov-list { margin: 0; padding-left: 18px; }
+        .ov-list li { color: var(--text-secondary); font-size: 13px; line-height: 1.65; margin-bottom: 4px; }
+        .ov-roadmap { display: grid; gap: 8px; }
+        .ov-step {
+            display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: start;
+            padding: 10px; border-radius: 12px; border: 1px solid var(--sc-line); background: rgba(15,23,42,.45);
+        }
+        .ov-step .phase {
+            font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 700;
+            color: #7dd3fc; padding-top: 2px;
+        }
+        .sc-btn.accent {
+            background: linear-gradient(135deg, rgba(14,165,233,.25), rgba(16,185,129,.2));
+            border-color: rgba(56,189,248,.4); color: #e0f2fe;
+        }
     </style>
 </head>
 <body>
@@ -322,6 +350,8 @@
                                 <button class="sc-btn" type="button" id="btnMd">下载 Markdown</button>
                                 <button class="sc-btn" type="button" id="btnCsv">下载 FAQ CSV</button>
                                 <button class="sc-btn" type="button" id="btnCopy">复制 FAQ</button>
+                                <button class="sc-btn accent" type="button" id="btnReport">导出客户报告</button>
+                                <button class="sc-btn ghost" type="button" id="btnPreviewReport">预览报告</button>
                                 <button class="sc-btn ghost" type="button" id="rerunBtn">重新运行</button>
                             </div>
                             <div class="pane active" id="pane-overview"></div>
@@ -933,24 +963,136 @@
             await sleep(30);
         }
 
+        function priorityScore(p) {
+            const s = String(p || "").toUpperCase();
+            if (s.includes("P0") || s.includes("高")) return 3;
+            if (s.includes("P1") || s.includes("中")) return 2;
+            return 1;
+        }
+
+        function buildOverviewInsights(data, task) {
+            const scenarios = data.scenarios || [];
+            const sops = data.sops || [];
+            const faqs = data.faqs || [];
+            const risks = data.risks || [];
+            const input = (data.meta && data.meta.input) || (task && task.inputMeta) || {};
+            const sessions = (input.sessions && input.sessions.length) || 0;
+            const turns = input.turns || 0;
+            const chars = input.chars || 0;
+            const batches = (data.meta && (data.meta.batches || data.meta.batchCount)) || 1;
+
+            const p0 = scenarios.filter((s) => priorityScore(s.priority) >= 3).length;
+            const p1 = scenarios.filter((s) => priorityScore(s.priority) === 2).length;
+            const highFreq = scenarios.filter((s) => /高/.test(String(s.frequency || ""))).length;
+            const faqCats = {};
+            faqs.forEach((f) => {
+                const c = f.category || f.catalog || "未分类";
+                faqCats[c] = (faqCats[c] || 0) + 1;
+            });
+            const topCats = Object.keys(faqCats).sort((a, b) => faqCats[b] - faqCats[a]).slice(0, 5)
+                .map((k) => ({ name: k, count: faqCats[k] }));
+            const maxCat = topCats.length ? topCats[0].count : 1;
+
+            // readiness: coverage of P0 + SOP + FAQ depth
+            let score = 35;
+            score += Math.min(25, scenarios.length * 6);
+            score += Math.min(15, sops.length * 5);
+            score += Math.min(15, faqs.length * 2);
+            score += p0 >= 2 ? 8 : (p0 ? 4 : 0);
+            score -= Math.min(12, risks.filter((r) => /高/.test(String(r.level || ""))).length * 6);
+            score = Math.max(20, Math.min(96, score));
+
+            const readiness = score >= 80 ? "可试点上线" : (score >= 60 ? "建议小范围灰度" : "需补齐资产后再上线");
+            const narrative = [
+                "基于 " + sessions + " 段对话 / " + turns + " 轮交互，识别出 " + scenarios.length + " 个业务场景。",
+                "其中 P0 " + p0 + " 个、高频 " + highFreq + " 个，建议优先覆盖机器人首轮应答与转人工边界。",
+                "当前沉淀 " + sops.length + " 条 SOP、" + faqs.length + " 条 FAQ" + (topCats.length ? ("，知识集中在「" + topCats[0].name + "」等目录") : "") + "。",
+                risks.length ? ("仍有 " + risks.length + " 个风险点需业务确认后再全量放开。") : "暂未发现阻断性风险，可进入试点验证。"
+            ];
+
+            const roadmap = [
+                { phase: "W1", title: "导入 P0 场景 FAQ", detail: (scenarios.filter((s) => priorityScore(s.priority) >= 3).map((s) => s.name).slice(0, 3).join("、") || "优先场景") + " 进入机器人，并开启人工抽检。" },
+                { phase: "W2", title: "挂载 SOP 与升级策略", detail: "把 " + Math.min(sops.length, 3) + " 条核心 SOP 配置到流程引擎，明确升级条件与时效口径。" },
+                { phase: "W3", title: "扩充相似问与目录", detail: "围绕 Top FAQ 补口语相似问，按目录做召回评测，目标命中率提升。" },
+                { phase: "W4", title: "风险闭环与扩量", detail: risks.length ? ("先处理：" + (risks[0].title || "高优风险") + "，再逐步放开中低频场景。") : "完成灰度复盘后扩大自动应答比例。" }
+            ];
+
+            const actions = [];
+            if (p0) actions.push("本周上线 " + p0 + " 个 P0 场景的标准问与答复");
+            if (sops.length) actions.push("审核并固化 " + Math.min(2, sops.length) + " 条高频 SOP 步骤与升级话术");
+            if (faqs.length >= 3) actions.push("选取 Top " + Math.min(10, faqs.length) + " FAQ 做相似问扩充与回归测试");
+            if (risks.length) actions.push("组织业务确认风险口径：" + (risks[0].title || "首个风险项"));
+            if (!actions.length) actions.push("补充更多真实对话后重新分析，以提高冷启动覆盖度");
+
+            return {
+                sessions, turns, chars, batches, p0, p1, highFreq, topCats, maxCat,
+                score, readiness, narrative, roadmap, actions,
+                counts: { scenarios: scenarios.length, sops: sops.length, faqs: faqs.length, risks: risks.length }
+            };
+        }
+
+        function renderOverview(data, task) {
+            const insights = buildOverviewInsights(data, task);
+            const scenarios = data.scenarios || [];
+            const modeLabel = (data.meta && String(data.meta.mode || "").indexOf("offline") >= 0)
+                ? ("离线分批 ×" + insights.batches)
+                : ("API 分批 ×" + insights.batches);
+
+            return ''
+                + '<div class="sc-item"><h4>执行摘要</h4><p>' + esc(data.summary || "已完成分析") + "</p>"
+                + '<div class="sc-chips">'
+                + '<span class="sc-chip ok">' + esc(modeLabel) + "</span>"
+                + '<span class="sc-chip">' + insights.counts.scenarios + " 场景</span>"
+                + '<span class="sc-chip">' + insights.counts.sops + " SOP</span>"
+                + '<span class="sc-chip">' + insights.counts.faqs + " FAQ</span>"
+                + '<span class="sc-chip warn">' + insights.counts.risks + " 风险</span>"
+                + '<span class="sc-chip">' + esc(insights.readiness) + "</span>"
+                + "</div></div>"
+
+                + '<div class="ov-kpis">'
+                + '<div class="ov-kpi"><div class="v">' + insights.score + '</div><div class="l">冷启动就绪度</div><div class="ov-bar"><i style="width:' + insights.score + '%"></i></div></div>'
+                + '<div class="ov-kpi"><div class="v">' + insights.p0 + '</div><div class="l">P0 场景</div></div>'
+                + '<div class="ov-kpi"><div class="v">' + insights.sessions + '</div><div class="l">对话段数</div></div>'
+                + '<div class="ov-kpi"><div class="v">' + insights.counts.faqs + '</div><div class="l">可导入 FAQ</div></div>'
+                + "</div>"
+
+                + '<div class="ov-grid" style="margin-top:10px;">'
+                + '<div class="sc-item"><h4>总览再分析</h4><ul class="ov-list">'
+                + insights.narrative.map((x) => "<li>" + esc(x) + "</li>").join("")
+                + '</ul></div>'
+                + '<div class="sc-item"><h4>知识目录分布</h4>'
+                + (insights.topCats.length ? insights.topCats.map((c) =>
+                    '<div class="ov-row"><span>' + esc(c.name) + "</span><span>" + c.count + "</span></div>"
+                    + '<div class="ov-bar"><i style="width:' + Math.max(8, Math.round(c.count / insights.maxCat * 100)) + '%"></i></div>'
+                  ).join("") : '<p class="muted">暂无目录统计</p>')
+                + "</div></div>"
+
+                + '<div class="sc-item"><h4>建议上线路线图</h4><div class="ov-roadmap">'
+                + insights.roadmap.map((r) =>
+                    '<div class="ov-step"><div class="phase">' + esc(r.phase) + '</div><div><strong>' + esc(r.title)
+                    + '</strong><div class="muted" style="margin-top:4px;">' + esc(r.detail) + "</div></div></div>"
+                  ).join("")
+                + "</div></div>"
+
+                + '<div class="sc-item"><h4>本周行动清单</h4><ol class="ov-list">'
+                + insights.actions.map((a) => "<li>" + esc(a) + "</li>").join("")
+                + "</ol></div>"
+
+                + '<div class="sc-item"><h4>优先场景队列</h4><ol>'
+                + (scenarios.slice().sort((a, b) => priorityScore(b.priority) - priorityScore(a.priority)).slice(0, 5)
+                    .map((s) => "<li><strong>" + esc(s.name) + "</strong> — " + esc(s.priority || "P1") + " / " + esc(s.frequency || "")
+                    + (s.intent ? (" · " + esc(s.intent)) : "") + "</li>").join("") || "<li>暂无</li>")
+                + "</ol></div>";
+        }
+
         function renderResult(data) {
+            const task = getTask(activeTaskId);
             const scenarios = data.scenarios || [];
             const sops = data.sops || [];
             const faqs = data.faqs || [];
             const risks = data.risks || [];
 
-            $("pane-overview").innerHTML =
-                '<div class="sc-item"><h4>冷启动摘要</h4><p>' + esc(data.summary || "已完成分析") + "</p>" +
-                '<div class="sc-chips">' +
-                '<span class="sc-chip ok">' + esc((data.meta && String(data.meta.mode || "").indexOf("offline") >= 0) ? ("离线分批 ×" + (data.meta.batches || 1)) : ("API 分批 ×" + ((data.meta && data.meta.batches) || 1))) + "</span>" +
-                '<span class="sc-chip">' + scenarios.length + " 场景</span>" +
-                '<span class="sc-chip">' + sops.length + " SOP</span>" +
-                '<span class="sc-chip">' + faqs.length + " FAQ</span>" +
-                '<span class="sc-chip warn">' + risks.length + " 风险点</span>" +
-                "</div></div>" +
-                '<div class="sc-item"><h4>建议上线顺序</h4><ol>' +
-                (scenarios.slice(0, 5).map((s) => "<li><strong>" + esc(s.name) + "</strong> — " + esc(s.priority || "P1") + " / " + esc(s.frequency || "") + "</li>").join("") || "<li>暂无</li>") +
-                "</ol></div>";
+            $("pane-overview").innerHTML = renderOverview(data, task);
 
             $("pane-scenarios").innerHTML = scenarios.length ? scenarios.map((s) =>
                 '<div class="sc-item"><h4>' + esc(s.name) + "</h4><p>" + esc(s.description) + '</p><div class="sc-chips">' +
@@ -1162,6 +1304,234 @@
             }
         }
 
+        function currentTask() {
+            return getTask(activeTaskId);
+        }
+
+        function buildCustomerReportHTML(task) {
+            const data = task && task.result ? task.result : null;
+            if (!data) return "";
+            const company = (task.config && task.config.company) || (data.meta && data.meta.company) || "客户品牌";
+            const brief = (task.config && task.config.brief) || (data.meta && data.meta.brief) || "";
+            const industry = industryLabel((task.config && task.config.industry) || "general");
+            const insights = buildOverviewInsights(data, task);
+            const scenarios = data.scenarios || [];
+            const sops = data.sops || [];
+            const faqs = data.faqs || [];
+            const risks = data.risks || [];
+            const genAt = (data.meta && (data.meta.generatedAt || data.meta.createdAt)) || task.finishedAt || task.createdAt || "";
+            const dateLabel = genAt ? fmtTime(genAt) : "";
+            const safeName = String(company).replace(/[^\w\u4e00-\u9fa5\-]+/g, "_").slice(0, 40);
+
+            const catHtml = insights.topCats.length
+                ? insights.topCats.map((c) => {
+                    const pct = Math.max(8, Math.round((c.count / Math.max(insights.maxCat, 1)) * 100));
+                    return '<div class="dist-row"><div class="dist-label"><span>' + esc(c.name) + '</span><span>' + c.count +
+                        '</span></div><div class="dist-bar"><i style="width:' + pct + '%"></i></div></div>';
+                }).join("")
+                : '<p class="note">暂无目录分布</p>';
+
+            const narrativeHtml = insights.narrative.map((x) => "<li>" + esc(x) + "</li>").join("");
+            const actionsHtml = insights.actions.map((x) => "<li>" + esc(x) + "</li>").join("");
+            const roadmapHtml = insights.roadmap.map((r) =>
+                '<div class="road-item"><div class="road-phase">' + esc(r.phase) + '</div><div><strong>' +
+                esc(r.title) + '</strong><p>' + esc(r.detail) + '</p></div></div>'
+            ).join("");
+
+            const scenarioHtml = scenarios.slice().sort((a, b) => priorityScore(b.priority) - priorityScore(a.priority)).map((s, i) =>
+                '<article class="card"><div class="card-kicker">场景 ' + String(i + 1).padStart(2, "0") +
+                ' · ' + esc(s.priority || "P1") + '</div><h3>' + esc(s.name) + '</h3><p>' + esc(s.description || "") +
+                '</p><div class="tags">' +
+                (s.frequency ? '<span>' + esc("频次 " + s.frequency) + '</span>' : '') +
+                (s.intent ? '<span>' + esc(s.intent) + '</span>' : '') +
+                '</div></article>'
+            ).join("") || '<p class="note">暂无场景</p>';
+
+            const sopHtml = sops.map((s) =>
+                '<article class="card"><div class="card-kicker">SOP</div><h3>' + esc(s.scenario || s.name || "流程") +
+                '</h3>' + (s.goal ? '<p><strong>目标：</strong>' + esc(s.goal) + '</p>' : '') +
+                '<ol>' + (s.steps || []).map((step) => '<li>' + esc(step) + '</li>').join('') + '</ol>' +
+                (s.escalation ? '<p class="note">升级：' + esc(s.escalation) + '</p>' : '') +
+                '</article>'
+            ).join('') || '<p class="note">暂无 SOP</p>';
+
+            const faqHtml = faqs.slice(0, 20).map((f) =>
+                '<article class="faq"><h3>Q：' + esc(f.question) + '</h3><p>A：' + esc(f.answer) + '</p><div class="tags">' +
+                (f.category ? '<span>' + esc(f.category) + '</span>' : '') +
+                (f.priority ? '<span>' + esc(f.priority) + '</span>' : '') +
+                '</div>' +
+                (Array.isArray(f.similar) && f.similar.length
+                    ? '<div class="similar">相似问：' + f.similar.map((x) => esc(x)).join('、') + '</div>'
+                    : '') +
+                '</article>'
+            ).join('') || '<p class="note">暂无 FAQ</p>';
+
+            const riskHtml = risks.length
+                ? risks.map((r) =>
+                    '<article class="risk"><div class="risk-level">' + esc(r.level || "中") +
+                    '</div><div><h3>' + esc(r.title || "风险项") + '</h3><p>' + esc(r.detail || "") +
+                    '</p></div></article>'
+                  ).join('')
+                : '<p class="note">未发现明显风险</p>';
+
+            return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${esc(company)} · AI客服冷启动报告</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f7fb;--ink:#0f172a;--muted:#5b6b7c;--line:rgba(15,23,42,.08);--card:rgba(255,255,255,.84);--teal:#0f766e;--cyan:#0284c7;--mint:#059669;--warn:#b45309;--shadow:0 18px 50px rgba(15,23,42,.08)}
+*{box-sizing:border-box}body{margin:0;font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--ink);background:radial-gradient(1100px 500px at 10% -10%,rgba(14,165,233,.18),transparent 55%),radial-gradient(900px 480px at 100% 0%,rgba(16,185,129,.14),transparent 50%),linear-gradient(180deg,#eef5fb 0%,#f7fafc 42%,#f3f6fa 100%)}
+.wrap{max-width:1080px;margin:0 auto;padding:36px 20px 80px}
+.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:28px;padding:42px 40px;background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(255,255,255,.72));box-shadow:var(--shadow)}
+.hero::after{content:"";position:absolute;right:-80px;top:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(2,132,199,.18),transparent 70%)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:14px}
+.hero h1{font-family:Fraunces,Georgia,serif;font-size:clamp(34px,5vw,52px);line-height:1.08;margin:0 0 12px;letter-spacing:-.03em;max-width:16ch}
+.lead{font-size:16px;color:var(--muted);max-width:56ch;line-height:1.7;margin:0}
+.hero-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.pill{border:1px solid var(--line);background:rgba(255,255,255,.7);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:600;color:var(--muted)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#0ea5e9,#0f766e);color:#fff;font-size:13px}
+.btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0 8px}
+.kpi{border:1px solid var(--line);border-radius:18px;padding:16px;background:var(--card);box-shadow:var(--shadow)}
+.kpi .n{font-family:"IBM Plex Mono",monospace;font-size:28px;font-weight:700;color:var(--cyan)}
+.kpi .l{font-size:12px;color:var(--muted);margin-top:4px}
+.score-bar{height:8px;border-radius:999px;background:rgba(15,23,42,.08);overflow:hidden;margin-top:10px}
+.score-bar>i{display:block;height:100%;background:linear-gradient(90deg,#0284c7,#059669)}
+section{margin-top:28px}
+.sec-title{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:12px}
+.sec-title h2{font-family:Fraunces,Georgia,serif;font-size:28px;margin:0;letter-spacing:-.02em}
+.sec-title p{margin:0;color:var(--muted);font-size:13px}
+.grid-2{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.panel,.card,.faq,.risk{border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:var(--shadow);padding:16px 18px}
+.card h3,.faq h3,.risk h3,.panel h3{margin:0 0 8px;font-size:16px}
+.card p,.faq p,.risk p,.panel p,li{color:var(--muted);line-height:1.65;font-size:14px}
+.card-kicker{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.04em;margin-bottom:6px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tags span{font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;background:rgba(2,132,199,.08);color:#0369a1;border:1px solid rgba(2,132,199,.12)}
+.similar{margin-top:8px;font-size:12px;color:var(--muted)}
+.note{color:var(--muted);font-size:13px}
+.dist-row{margin-top:10px}
+.dist-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.dist-bar{height:8px;border-radius:999px;background:rgba(15,23,42,.08);overflow:hidden;margin-top:5px}
+.dist-bar>i{display:block;height:100%;background:linear-gradient(90deg,#0284c7,#0f766e)}
+.road-item{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.road-item:last-child{border-bottom:0}
+.road-phase{font-family:"IBM Plex Mono",monospace;font-weight:700;color:var(--cyan);background:rgba(2,132,199,.08);border-radius:10px;text-align:center;padding:8px 0;height:fit-content}
+.risk{display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:start;margin-bottom:10px}
+.risk-level{font-size:12px;font-weight:700;text-align:center;border-radius:10px;padding:8px 0;background:rgba(180,83,9,.1);color:var(--warn)}
+footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media (max-width:900px){.kpis,.grid-2,.grid-3{grid-template-columns:1fr}.hero{padding:28px 22px}}
+@media print{body{background:#fff}.actions{display:none}.hero,.panel,.card,.faq,.kpi,.risk{box-shadow:none}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="eyebrow">SmartCS Cold Start Report</div>
+      <h1>${esc(company)}</h1>
+      <p class="lead">${esc(data.summary || (company + " AI 客服冷启动资产包已生成，可用于机器人首期上线与知识库导入。"))}</p>
+      <div class="hero-meta">
+        <span class="pill">行业 · ${esc(industry)}</span>
+        <span class="pill">就绪度 · ${insights.score} / 100 · ${esc(insights.readiness)}</span>
+        <span class="pill">生成 · ${esc(dateLabel || "-")}</span>
+        ${brief ? `<span class="pill">背景 · ${esc(brief.slice(0, 36))}${brief.length > 36 ? "…" : ""}</span>` : ""}
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="window.print()">打印 / 另存 PDF</button>
+        <button class="btn secondary" onclick="window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'})">查看行动清单</button>
+      </div>
+    </header>
+
+    <div class="kpis">
+      <div class="kpi"><div class="n">${insights.score}</div><div class="l">冷启动就绪度</div><div class="score-bar"><i style="width:${insights.score}%"></i></div></div>
+      <div class="kpi"><div class="n">${insights.counts.scenarios}</div><div class="l">业务场景</div></div>
+      <div class="kpi"><div class="n">${insights.counts.sops}</div><div class="l">SOP 流程</div></div>
+      <div class="kpi"><div class="n">${insights.counts.faqs}</div><div class="l">FAQ 知识</div></div>
+    </div>
+
+    <section>
+      <div class="sec-title"><h2>总览洞察</h2><p>对原始对话的二次诊断与上线建议</p></div>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>关键结论</h3>
+          <ul>${narrativeHtml}</ul>
+          <h3 style="margin-top:16px;">本周行动</h3>
+          <ol>${actionsHtml}</ol>
+        </div>
+        <div class="panel">
+          <h3>知识目录分布</h3>
+          ${catHtml}
+          <div style="margin-top:16px;font-size:12px;color:var(--muted)">
+            输入规模：${insights.sessions} 段 / ${insights.turns} 轮 / ${insights.chars} 字 · 分批 ${insights.batches}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-title"><h2>上线路线图</h2><p>建议按周推进，先 P0 后扩量</p></div>
+      <div class="panel">${roadmapHtml}</div>
+    </section>
+
+    <section>
+      <div class="sec-title"><h2>优先场景</h2><p>按优先级排序，适合首期机器人覆盖</p></div>
+      <div class="grid-3">${scenarioHtml}</div>
+    </section>
+
+    <section>
+      <div class="sec-title"><h2>核心 SOP</h2><p>可直接配置到流程或坐席辅助</p></div>
+      <div class="grid-2">${sopHtml}</div>
+    </section>
+
+    <section>
+      <div class="sec-title"><h2>FAQ 知识包</h2><p>展示前 ${Math.min(20, faqs.length)} 条，可导入知识库</p></div>
+      <div class="grid-2">${faqHtml}</div>
+    </section>
+
+    <section>
+      <div class="sec-title"><h2>风险与边界</h2><p>上线前建议业务确认</p></div>
+      ${riskHtml}
+    </section>
+
+    <footer>
+      <div>由 SmartCS 冷启动系统生成 · 可供客户评审与归档</div>
+      <div>${esc(safeName)}-coldstart-report</div>
+    </footer>
+  </div>
+</body>
+</html>`;
+        }
+
+        function openCustomerReport(download) {
+            const task = currentTask();
+            if (!task || !task.result) { toast("请先完成一个任务再导出报告"); return; }
+            const html = buildCustomerReportHTML(task);
+            if (!html) { toast("报告生成失败"); return; }
+            const company = (task.config && task.config.company) || "customer";
+            const filename = String(company).replace(/[^\w\u4e00-\u9fa5\-]+/g, "_").slice(0, 40) + "-冷启动报告.html";
+            if (download) {
+                downloadBlob(filename, html, "text/html;charset=utf-8");
+                banner("客户报告已导出：" + filename + "（可直接发给客户或浏览器打开）", "ok");
+                toast("客户报告已下载");
+                return;
+            }
+            const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const win = window.open(url, "_blank");
+            if (!win) {
+                downloadBlob(filename, html, "text/html;charset=utf-8");
+                toast("弹窗被拦截，已改为下载报告");
+            } else {
+                toast("已打开客户报告预览");
+            }
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
+        }
+
         function downloadBlob(filename, content, type) {
             const a = document.createElement("a");
             a.href = URL.createObjectURL(new Blob([content], { type: type }));
@@ -1299,6 +1669,8 @@
         $("btnMd").addEventListener("click", downloadMarkdown);
         $("btnCsv").addEventListener("click", downloadCSV);
         $("btnCopy").addEventListener("click", copyFAQ);
+        $("btnReport").addEventListener("click", () => openCustomerReport(true));
+        $("btnPreviewReport").addEventListener("click", () => openCustomerReport(false));
         $("rerunBtn").addEventListener("click", async () => {
             const t = getTask(activeTaskId);
             if (!t) return;

@@ -182,13 +182,28 @@ body[data-page] .footer { display: none; }
 .sc-check input { width: auto; margin-top: 2px; }
 
 .sc-file {
-    display: block; border: 1.5px dashed var(--sc-line-strong); border-radius: 12px;
-    padding: 18px 14px; text-align: center; color: var(--sc-text-2);
+    position: relative; display: block; border: 1.5px dashed var(--sc-line-strong); border-radius: 12px;
+    padding: 22px 14px; text-align: center; color: var(--sc-text-2);
     font-size: 13px; cursor: pointer; background: rgba(2, 6, 23, 0.35);
+    overflow: hidden; transition: border-color .15s ease, background .15s ease, color .15s ease;
 }
-.sc-file:hover { border-color: rgba(34, 211, 238, 0.45); color: var(--sc-text); }
-.sc-file input { display: none; }
-.sc-file strong { display: block; color: var(--sc-text); margin-bottom: 4px; }
+.sc-file:hover, .sc-file.is-dragover {
+    border-color: rgba(34, 211, 238, 0.55); color: var(--sc-text);
+    background: rgba(34, 211, 238, 0.06);
+}
+/* Chrome 不会为 display:none 的 file input 响应 label 点击，改为铺满热区的透明 input */
+.sc-file input[type="file"] {
+    position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; display: block; font-size: 0;
+}
+.sc-file strong { display: block; color: var(--sc-text); margin-bottom: 4px; pointer-events: none; }
+.sc-file .sc-file-hint { pointer-events: none; }
+.sc-file-actions {
+    position: relative; z-index: 3; margin-top: 12px;
+    display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+    pointer-events: none; /* 默认穿透，让透明 file input 接收点击 */
+}
+.sc-file-actions .sc-btn { pointer-events: auto; }
 
 .sc-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;

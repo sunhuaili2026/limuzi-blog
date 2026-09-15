@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartCS 对话冷启动 - 李子木</title>
+    <title>AI客服冷启动系统 - 李子木</title>
     <link rel="stylesheet" href="../../style.css">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
@@ -168,8 +168,8 @@
         <div class="container sc-wrap">
             <div class="sc-hero">
                 <div>
-                    <span class="section-label">SmartCS · Cold Start</span>
-                    <h1>对话冷启动工作台</h1>
+                    <span class="section-label">SmartCS · AI Customer Service</span>
+                    <h1>AI客服冷启动系统</h1>
                     <p>把零散客服对话转成可上线的场景地图、SOP、FAQ 与相似问。先本地解析质量，再分阶段挖掘，最后审核导出。</p>
                 </div>
                 <div class="sc-pipeline" id="pipeline">
@@ -185,11 +185,6 @@
 
     <section class="section" style="padding-top:0;">
         <div class="container sc-wrap">
-            <div class="sc-tabs">
-                <a href="/tools/smartcs-coldstart/" class="sc-tab active">对话冷启动</a>
-                <a href="/tools/colloquial-knowledge.html" class="sc-tab">知识库语音化</a>
-            </div>
-
             <div class="sc-grid">
                 <aside class="sc-panel">
                     <h3>项目配置</h3>
@@ -278,7 +273,6 @@
                             <button class="sc-btn" type="button" id="btnMd">下载 Markdown</button>
                             <button class="sc-btn" type="button" id="btnCsv">下载 FAQ CSV</button>
                             <button class="sc-btn" type="button" id="btnCopy">复制 FAQ</button>
-                            <a class="sc-btn primary" href="/tools/colloquial-knowledge.html">下一步：知识库语音化</a>
                         </div>
                         <div class="pane active" id="pane-overview"></div>
                         <div class="pane" id="pane-scenarios"></div>
@@ -550,7 +544,7 @@
 
         async function analyzeWithAPI(company, brief, focus, text, meta, withSimilar) {
             const industry = industryLabel($("industry").value);
-            const system = "你是 SmartCS 对话冷启动架构师，服务企业「" + company + "」（行业：" + industry + "；背景：" + (brief || "未提供") + "）。\n" +
+            const system = "你是 AI 客服冷启动架构师，服务企业「" + company + "」（行业：" + industry + "；背景：" + (brief || "未提供") + "）。\n" +
                 "任务：从客服对话中产出可直接用于机器人冷启动的结构化资产。\n" +
                 "分析重心：" + focus + "。\n" +
                 "只返回合法 JSON，不要 Markdown。字段：\n" +
@@ -749,7 +743,7 @@
         function downloadMarkdown() {
             if (!lastResult) return;
             const d = lastResult;
-            let md = "# " + ((d.meta && d.meta.company) || "SmartCS") + " 对话冷启动报告\n\n";
+            let md = "# " + ((d.meta && d.meta.company) || "AI客服") + " 冷启动报告\n\n";
             md += (d.summary || "") + "\n\n## 场景\n";
             (d.scenarios || []).forEach((s) => {
                 md += "\n### " + s.name + "\n- 描述：" + (s.description || "") + "\n- 意图：" + (s.intent || "") + "\n- 频次：" + (s.frequency || "") + "\n- 优先级：" + (s.priority || "") + "\n";

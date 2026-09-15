@@ -5,52 +5,150 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartCS 对话冷启动 - 李子木</title>
     <link rel="stylesheet" href="../../style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
-        .sc-layout { max-width: 1100px; margin: 0 auto; }
-        .sc-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
-        .sc-tab {
-            padding: 10px 20px; border-radius: 10px; border: 1px solid var(--border-color);
-            background: var(--bg-card); color: var(--text-secondary); text-decoration: none;
-            font-size: 14px; font-weight: 600;
+        :root {
+            --sc-line: rgba(148, 163, 184, 0.16);
+            --sc-panel: rgba(15, 23, 42, 0.72);
         }
-        .sc-tab.active { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); color: var(--accent-primary); }
-        .sc-grid { display: grid; grid-template-columns: 280px 1fr; gap: 24px; }
-        @media (max-width: 900px) { .sc-grid { grid-template-columns: 1fr; } }
-        .sc-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
-        .sc-field { margin-bottom: 14px; }
+        body { font-family: "IBM Plex Sans", system-ui, sans-serif; }
+        .sc-wrap { max-width: 1240px; margin: 0 auto; }
+        .sc-hero {
+            display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px;
+            align-items: end; margin-bottom: 22px;
+        }
+        @media (max-width: 920px) { .sc-hero { grid-template-columns: 1fr; } }
+        .sc-hero h1 {
+            font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.02em;
+            margin: 8px 0 10px; line-height: 1.15;
+        }
+        .sc-hero p { color: var(--text-secondary); font-size: 15px; max-width: 54ch; }
+        .sc-pipeline {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 12px;
+            border-radius: 16px; border: 1px solid var(--sc-line);
+            background:
+                radial-gradient(circle at 15% 20%, rgba(56,189,248,.12), transparent 42%),
+                radial-gradient(circle at 90% 0%, rgba(52,211,153,.1), transparent 36%),
+                var(--bg-card);
+        }
+        @media (max-width: 920px) { .sc-pipeline { grid-template-columns: 1fr 1fr; } }
+        .sc-step {
+            padding: 12px; border-radius: 12px; background: rgba(15,23,42,.45);
+            border: 1px solid transparent; min-height: 84px; transition: .25s ease;
+        }
+        .sc-step .n { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+        .sc-step .t { font-size: 13px; font-weight: 700; }
+        .sc-step .d { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+        .sc-step.active { border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.08); }
+        .sc-step.done { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.08); }
+        .sc-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+        .sc-tab {
+            padding: 10px 16px; border-radius: 999px; border: 1px solid var(--sc-line);
+            color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 600;
+        }
+        .sc-tab.active {
+            color: #031525; border-color: transparent;
+            background: linear-gradient(135deg, #38bdf8, #34d399);
+        }
+        .sc-grid { display: grid; grid-template-columns: 300px 1fr; gap: 18px; }
+        @media (max-width: 980px) { .sc-grid { grid-template-columns: 1fr; } }
+        .sc-panel {
+            background: var(--sc-panel); border: 1px solid var(--sc-line);
+            border-radius: 18px; padding: 18px; backdrop-filter: blur(8px);
+        }
+        .sc-panel h3 {
+            font-size: 14px; font-weight: 700; margin-bottom: 14px;
+            padding-bottom: 10px; border-bottom: 1px solid var(--sc-line);
+        }
+        .sc-field { margin-bottom: 12px; }
         .sc-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
         .sc-field input, .sc-field textarea, .sc-field select {
-            width: 100%; background: var(--bg-secondary); border: 1px solid var(--border-color);
-            border-radius: 8px; padding: 10px; color: var(--text-primary); font-family: inherit; font-size: 13px;
+            width: 100%; background: rgba(15,23,42,.7); border: 1px solid var(--sc-line);
+            border-radius: 10px; padding: 10px 12px; color: var(--text-primary); font: inherit; font-size: 13px;
         }
         .sc-field textarea { min-height: 70px; resize: vertical; }
-        .sc-btn {
-            display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px;
-            border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-secondary);
-            color: var(--text-primary); font-weight: 600; cursor: pointer; font-size: 14px;
+        .sc-field input:focus, .sc-field textarea:focus, .sc-field select:focus {
+            outline: none; border-color: rgba(56,189,248,.55); box-shadow: 0 0 0 3px rgba(56,189,248,.12);
         }
-        .sc-btn.primary { background: var(--accent-gradient); border: none; width: 100%; margin-top: 12px; }
-        .sc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .sc-textarea { width: 100%; min-height: 200px; background: var(--bg-secondary); border: 1px solid var(--border-color);
-            border-radius: 12px; padding: 14px; color: var(--text-primary); font-family: inherit; font-size: 14px; line-height: 1.7; }
-        .sc-section { margin-bottom: 20px; }
-        .sc-section h3 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-        .sc-item { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 10px; }
-        .sc-item h4 { font-size: 15px; margin-bottom: 8px; }
-        .sc-item p, .sc-item li { color: var(--text-secondary); line-height: 1.7; font-size: 14px; }
-        .sc-item ul { padding-left: 18px; margin: 0; }
-        .sc-progress { display: none; text-align: center; padding: 40px; color: var(--text-secondary); }
+        .sc-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--text-secondary); margin: 8px 0 12px; }
+        .sc-check input { width: auto; margin-top: 2px; }
+        .sc-file {
+            display: block; border: 1.5px dashed var(--sc-line); border-radius: 12px;
+            padding: 14px; text-align: center; color: var(--text-secondary); font-size: 13px; cursor: pointer;
+        }
+        .sc-file:hover { border-color: rgba(56,189,248,.5); color: var(--text-primary); }
+        .sc-file input { display: none; }
+        .sc-actions { display: grid; gap: 8px; margin-top: 10px; }
+        .sc-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 11px 14px; border-radius: 11px; border: 1px solid var(--sc-line);
+            background: rgba(30,41,59,.85); color: var(--text-primary);
+            font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none;
+        }
+        .sc-btn.primary { background: linear-gradient(135deg, #0ea5e9, #10b981); border: none; color: #031525; }
+        .sc-btn.ghost { background: transparent; }
+        .sc-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .sc-hint { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 8px; }
+        .sc-stack { display: grid; gap: 14px; }
+        .sc-textarea {
+            width: 100%; min-height: 230px; resize: vertical;
+            background: rgba(15,23,42,.7); border: 1px solid var(--sc-line); border-radius: 14px;
+            padding: 14px; color: var(--text-primary); font: inherit; font-size: 14px; line-height: 1.7;
+        }
+        .sc-stats { display: none; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .sc-stats.active { display: grid; }
+        @media (max-width: 720px) { .sc-stats { grid-template-columns: 1fr 1fr; } }
+        .sc-stat { border: 1px solid var(--sc-line); border-radius: 12px; padding: 12px; background: rgba(15,23,42,.55); }
+        .sc-stat .num { font-family: "IBM Plex Mono", monospace; font-size: 22px; font-weight: 600; color: #38bdf8; }
+        .sc-stat .lbl { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+        .sc-progress { display: none; border: 1px solid var(--sc-line); border-radius: 14px; padding: 16px; background: rgba(15,23,42,.55); }
         .sc-progress.active { display: block; }
-        .spinner { width: 36px; height: 36px; border: 3px solid var(--border-color); border-top-color: var(--accent-primary);
-            border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .sc-progress-bar { height: 8px; border-radius: 999px; background: rgba(148,163,184,.15); overflow: hidden; margin: 10px 0 8px; }
+        .sc-progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #38bdf8, #34d399); transition: width .35s ease; }
+        .sc-progress-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--text-secondary); }
         .sc-result { display: none; }
         .sc-result.active { display: block; }
-        .sc-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-        .sc-file { border: 2px dashed var(--border-color); border-radius: 10px; padding: 14px; text-align: center;
-            font-size: 13px; color: var(--text-secondary); cursor: pointer; margin-top: 8px; }
-        .sc-file input { display: none; }
+        .sc-rtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+        .sc-rtab {
+            border: 1px solid var(--sc-line); background: transparent; color: var(--text-secondary);
+            border-radius: 999px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+        }
+        .sc-rtab.active { color: var(--text-primary); border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.12); }
+        .sc-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .sc-item {
+            border: 1px solid var(--sc-line); border-radius: 14px; padding: 14px;
+            background: rgba(15,23,42,.55); margin-bottom: 10px;
+        }
+        .sc-item h4 { font-size: 15px; margin-bottom: 8px; }
+        .sc-item p, .sc-item li { color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+        .sc-item ol, .sc-item ul { padding-left: 18px; margin: 0; }
+        .sc-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .sc-chip {
+            font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 999px;
+            background: rgba(56,189,248,.12); color: #7dd3fc; border: 1px solid rgba(56,189,248,.2);
+        }
+        .sc-chip.ok { background: rgba(52,211,153,.12); color: #6ee7b7; border-color: rgba(52,211,153,.25); }
+        .sc-chip.warn { background: rgba(251,191,36,.12); color: #fcd34d; border-color: rgba(251,191,36,.25); }
+        .sc-chip.muted { background: rgba(148,163,184,.12); color: #cbd5e1; border-color: rgba(148,163,184,.2); }
+        .sc-similar { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--sc-line); font-size: 12px; color: var(--text-secondary); }
+        .sc-similar span {
+            display: inline-block; margin: 3px 6px 3px 0; padding: 3px 8px; border-radius: 8px;
+            background: rgba(30,41,59,.9); border: 1px solid var(--sc-line);
+        }
+        .sc-empty {
+            text-align: center; padding: 42px 16px; color: var(--text-secondary);
+            border: 1px dashed var(--sc-line); border-radius: 14px;
+        }
+        .sc-empty strong { display: block; color: var(--text-primary); margin-bottom: 6px; font-size: 15px; }
+        .pane { display: none; }
+        .pane.active { display: block; }
+        .sc-toast {
+            position: fixed; right: 20px; bottom: 20px; z-index: 2000; display: none;
+            background: #0f172a; border: 1px solid rgba(56,189,248,.35); color: var(--text-primary);
+            padding: 12px 16px; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.35);
+        }
+        .sc-toast.show { display: block; animation: scIn .25s ease; }
+        @keyframes scIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     </style>
 </head>
 <body>
@@ -66,177 +164,655 @@
         </div>
     </nav>
 
-    <section class="page-header" style="padding:120px 0 32px;">
-        <div class="container">
-            <span class="section-label">SmartCS</span>
-            <h1 class="page-title" style="font-size:36px;">🤖 对话冷启动分析</h1>
-            <p class="page-subtitle" style="color:var(--text-secondary);">上传客服对话记录，AI 自动挖掘业务场景、SOP 流程与 FAQ 知识库</p>
+    <section class="page-header" style="padding:110px 0 18px;">
+        <div class="container sc-wrap">
+            <div class="sc-hero">
+                <div>
+                    <span class="section-label">SmartCS · Cold Start</span>
+                    <h1>对话冷启动工作台</h1>
+                    <p>把零散客服对话转成可上线的场景地图、SOP、FAQ 与相似问。先本地解析质量，再分阶段挖掘，最后审核导出。</p>
+                </div>
+                <div class="sc-pipeline" id="pipeline">
+                    <div class="sc-step" data-step="parse"><div class="n">01</div><div class="t">对话解析</div><div class="d">清洗 / 分段 / 统计</div></div>
+                    <div class="sc-step" data-step="scene"><div class="n">02</div><div class="t">场景挖掘</div><div class="d">意图与频次</div></div>
+                    <div class="sc-step" data-step="sop"><div class="n">03</div><div class="t">SOP 提炼</div><div class="d">可执行步骤</div></div>
+                    <div class="sc-step" data-step="faq"><div class="n">04</div><div class="t">FAQ + 相似问</div><div class="d">可导入知识</div></div>
+                    <div class="sc-step" data-step="review"><div class="n">05</div><div class="t">审核导出</div><div class="d">JSON / MD / CSV</div></div>
+                </div>
+            </div>
         </div>
     </section>
 
     <section class="section" style="padding-top:0;">
-        <div class="container sc-layout">
+        <div class="container sc-wrap">
             <div class="sc-tabs">
-                <a href="/tools/smartcs-coldstart/" class="sc-tab active">对话冷启动 ✨</a>
+                <a href="/tools/smartcs-coldstart/" class="sc-tab active">对话冷启动</a>
                 <a href="/tools/colloquial-knowledge.html" class="sc-tab">知识库语音化</a>
             </div>
 
             <div class="sc-grid">
-                <aside class="sc-card">
-                    <h3 style="margin-bottom:16px;font-size:15px;">分析配置</h3>
+                <aside class="sc-panel">
+                    <h3>项目配置</h3>
                     <div class="sc-field">
                         <label for="companyName">品牌名称 *</label>
-                        <input type="text" id="companyName" placeholder="示例品牌">
+                        <input id="companyName" type="text" placeholder="例如：示例出行">
+                    </div>
+                    <div class="sc-field">
+                        <label for="industry">行业</label>
+                        <select id="industry">
+                            <option value="mobility">智能出行 / 两轮电动</option>
+                            <option value="ecommerce">电商零售</option>
+                            <option value="saas">SaaS / 软件</option>
+                            <option value="finance">金融保险</option>
+                            <option value="general">通用客服</option>
+                        </select>
                     </div>
                     <div class="sc-field">
                         <label for="companyBrief">业务背景</label>
-                        <textarea id="companyBrief" placeholder="如：电商零售 / 智能出行"></textarea>
+                        <textarea id="companyBrief" placeholder="产品线、售后渠道、常见问题范围…"></textarea>
                     </div>
-                    <label class="sc-file" for="fileInput">📁 上传 CSV / TXT 对话记录<input type="file" id="fileInput" accept=".csv,.txt"></label>
-                    <div id="fileName" style="font-size:12px;color:var(--text-secondary);margin-top:6px;"></div>
-                    <button class="sc-btn primary" id="analyzeBtn" onclick="startAnalyze()">开始分析</button>
+                    <div class="sc-field">
+                        <label for="focus">分析重心</label>
+                        <select id="focus">
+                            <option value="balanced">均衡（场景 + SOP + FAQ）</option>
+                            <option value="sop">偏流程（SOP 优先）</option>
+                            <option value="faq">偏知识（FAQ 优先）</option>
+                        </select>
+                    </div>
+                    <label class="sc-check"><input type="checkbox" id="genSimilar" checked><span>为 FAQ 生成口语相似问</span></label>
+                    <label class="sc-check"><input type="checkbox" id="offlineDemo"><span>离线演示模式（不调用 API）</span></label>
+
+                    <label class="sc-file" for="fileInput">
+                        上传 CSV / TXT / JSON 对话记录
+                        <input type="file" id="fileInput" accept=".csv,.txt,.json,.md">
+                    </label>
+                    <div id="fileName" class="sc-hint"></div>
+
+                    <div class="sc-actions">
+                        <button class="sc-btn primary" id="analyzeBtn" type="button">开始冷启动分析</button>
+                        <button class="sc-btn" id="sampleBtn" type="button">载入示例对话</button>
+                        <button class="sc-btn ghost" id="resetBtn" type="button">清空重置</button>
+                    </div>
+                    <p class="sc-hint">建议粘贴多通完整会话。系统会先做本地解析，再分阶段调用模型。</p>
                 </aside>
 
-                <main>
-                    <div class="sc-card">
-                        <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">粘贴客服对话记录</label>
-                        <textarea class="sc-textarea" id="chatInput" placeholder="支持粘贴通话转写、在线客服聊天记录...
+                <main class="sc-stack">
+                    <div class="sc-panel">
+                        <h3>对话输入</h3>
+                        <textarea class="sc-textarea" id="chatInput" placeholder="粘贴通话转写或在线客服记录…
 
-示例：
-客户：我的订单怎么还没发货？
-客服：您好，请提供订单号，我帮您查询。
-客户：12345678
-客服：查询到您的订单正在打包，预计明天发出。"></textarea>
+客户：订单还没发货
+客服：请提供订单号
+……
+
+——会话——
+客户：…"></textarea>
                     </div>
 
-                    <div class="sc-progress" id="loading">
-                        <div class="spinner"></div>
-                        <p>AI 正在分析对话，提取场景 / SOP / FAQ...</p>
+                    <div class="sc-stats" id="stats">
+                        <div class="sc-stat"><div class="num" id="statSessions">0</div><div class="lbl">会话段</div></div>
+                        <div class="sc-stat"><div class="num" id="statTurns">0</div><div class="lbl">对话轮次</div></div>
+                        <div class="sc-stat"><div class="num" id="statChars">0</div><div class="lbl">有效字符</div></div>
+                        <div class="sc-stat"><div class="num" id="statQuality">-</div><div class="lbl">输入质量</div></div>
                     </div>
 
-                    <div class="sc-result" id="result">
-                        <div class="sc-toolbar">
-                            <button class="sc-btn" onclick="downloadJSON()">⬇️ 下载 JSON</button>
-                            <button class="sc-btn" onclick="copyFAQ()">📋 复制 FAQ</button>
-                            <a href="/tools/colloquial-knowledge.html" class="sc-btn">→ 下一步：知识库语音化</a>
+                    <div class="sc-progress" id="progress">
+                        <div id="progressText">准备中…</div>
+                        <div class="sc-progress-bar"><div class="sc-progress-fill" id="progressFill"></div></div>
+                        <div class="sc-progress-meta">
+                            <span id="progressPhase">等待开始</span>
+                            <span id="progressPct">0%</span>
                         </div>
-                        <div class="sc-section" id="scenarioSection"></div>
-                        <div class="sc-section" id="sopSection"></div>
-                        <div class="sc-section" id="faqSection"></div>
+                    </div>
+
+                    <div class="sc-result sc-panel" id="result">
+                        <div class="sc-rtabs" id="resultTabs">
+                            <button class="sc-rtab active" type="button" data-pane="overview">总览</button>
+                            <button class="sc-rtab" type="button" data-pane="scenarios">场景</button>
+                            <button class="sc-rtab" type="button" data-pane="sops">SOP</button>
+                            <button class="sc-rtab" type="button" data-pane="faqs">FAQ</button>
+                            <button class="sc-rtab" type="button" data-pane="risks">风险点</button>
+                        </div>
+                        <div class="sc-toolbar">
+                            <button class="sc-btn" type="button" id="btnJson">下载 JSON</button>
+                            <button class="sc-btn" type="button" id="btnMd">下载 Markdown</button>
+                            <button class="sc-btn" type="button" id="btnCsv">下载 FAQ CSV</button>
+                            <button class="sc-btn" type="button" id="btnCopy">复制 FAQ</button>
+                            <a class="sc-btn primary" href="/tools/colloquial-knowledge.html">下一步：知识库语音化</a>
+                        </div>
+                        <div class="pane active" id="pane-overview"></div>
+                        <div class="pane" id="pane-scenarios"></div>
+                        <div class="pane" id="pane-sops"></div>
+                        <div class="pane" id="pane-faqs"></div>
+                        <div class="pane" id="pane-risks"></div>
+                    </div>
+
+                    <div class="sc-empty" id="emptyState">
+                        <strong>还没有分析结果</strong>
+                        上传或粘贴对话后点击「开始冷启动分析」。也可先「载入示例对话」体验完整流程。
                     </div>
                 </main>
             </div>
         </div>
     </section>
 
-    <footer class="footer"><div class="container"><div class="footer-bottom"><p>&copy; 2026 李子木</p></div></div></footer>
+    <footer class="footer">
+        <div class="container"><div class="footer-bottom"><p>&copy; 2026 李子木</p></div></div>
+    </footer>
+    <div class="sc-toast" id="toast"></div>
+
     <script src="../../script.js"></script>
     <script>
+    (function () {
+        const API_PASSWORD = "limuzi2025";
         let lastResult = null;
-        const API_KEY = 'limuzi2025';
+        let parseMeta = null;
 
-        document.getElementById('fileInput').addEventListener('change', async e => {
-            const file = e.target.files[0];
-            if (!file) return;
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('chatInput').value = await file.text();
-        });
+        const SAMPLE = `客户：我的车充不进电，充电器灯是红的
+客服：您好，请问是哪款车型？电池是否在车上充电？
+客户：E200P，电池插在车上充
+客服：请先确认充电器指示灯是否正常。红灯常亮通常表示未正确连接，请检查充电口是否卡到位。
+客户：我拔插了好几次还是红灯
+客服：建议您换一个插座试一下，并确认充电器型号与车辆匹配。如果仍无法充电，可以申请售后检测。
+客户：那大概多久能修好？
+客服：检测一般 1-3 个工作日，如确认充电器故障可走质保更换。
 
-        async function callAPI(messages) {
-            const res = await fetch('/api/deepseek', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: API_KEY, model: 'deepseek-chat', messages, temperature: 0.5 })
+——会话——
+
+客户：APP 里显示车辆离线，怎么配网？
+客服：请打开手机蓝牙和定位，进入 APP「添加车辆」，按仪表提示进入配网模式。
+客户：我点了配网，但一直转圈
+客服：请确认手机与车辆距离在 2 米内，并关闭其他 VPN。若超过 2 分钟仍失败，可重启车辆仪表后再试。
+客户：重启后成功了，谢谢
+客服：配网成功后建议做一次固件检查，有 OTA 更新可一并完成。
+
+——会话——
+
+客户：订单下了三天还没发货，单号 2026030888
+客服：我帮您查询……仓库显示缺货中的配件已到仓，今晚会发出。
+客户：能改成顺丰吗？
+客服：可以，我帮您备注加急物流，运费差价会以短信通知。
+客户：好的
+客服：已提交加急，预计明天揽收。`;
+
+        const $ = (id) => document.getElementById(id);
+
+        function toast(msg) {
+            const el = $("toast");
+            el.textContent = msg;
+            el.classList.add("show");
+            setTimeout(() => el.classList.remove("show"), 2200);
+        }
+        function esc(s) {
+            const d = document.createElement("div");
+            d.textContent = s == null ? "" : String(s);
+            return d.innerHTML;
+        }
+        function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+        function resetSteps() {
+            document.querySelectorAll(".sc-step").forEach((el) => el.classList.remove("active", "done"));
+        }
+        function setStep(name, state) {
+            document.querySelectorAll(".sc-step").forEach((el) => {
+                if (el.dataset.step !== name) return;
+                el.classList.remove("active", "done");
+                if (state) el.classList.add(state);
             });
-            if (!res.ok) throw new Error('API 调用失败');
+        }
+        function setProgress(pct, text, phase) {
+            $("progress").classList.add("active");
+            $("progressFill").style.width = pct + "%";
+            $("progressText").textContent = text;
+            $("progressPhase").textContent = phase;
+            $("progressPct").textContent = pct + "%";
+        }
+
+        function parseDialogues(raw) {
+            const text = (raw || "").trim();
+            if (!text) return { sessions: [], turns: 0, chars: 0, quality: "不足", tips: ["请粘贴至少一段完整对话"] };
+
+            const chunks = text
+                .split(/\n\s*(?:-{2,}|—{2,}|={2,}|会话分隔|——会话——)\s*\n/i)
+                .map((s) => s.trim())
+                .filter(Boolean);
+
+            const sessions = chunks.map((chunk, idx) => {
+                const lines = chunk.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+                const turns = lines.filter((l) => /^(客户|用户|客服|坐席|系统|agent|user|bot)[:：]/i.test(l));
+                return {
+                    id: idx + 1,
+                    raw: chunk,
+                    lines: lines.length,
+                    turns: turns.length || Math.max(1, Math.floor(lines.length / 2))
+                };
+            });
+
+            const turns = sessions.reduce((a, s) => a + s.turns, 0);
+            const chars = text.replace(/\s+/g, "").length;
+            let quality = "一般";
+            const tips = [];
+            if (sessions.length >= 2 && turns >= 8 && chars >= 200) quality = "良好";
+            if (sessions.length >= 3 && turns >= 15 && chars >= 500) quality = "优秀";
+            if (chars < 120) tips.push("文本偏短，建议补充更多会话");
+            if (sessions.length < 2) tips.push("建议提供 2 段以上不同场景会话");
+            if (!/(客户|用户|客服)/.test(text)) tips.push("未检测到「客户/客服」角色标注，准确率可能下降");
+            return { sessions, turns, chars, quality, tips };
+        }
+
+        function refreshLocalStats() {
+            parseMeta = parseDialogues($("chatInput").value);
+            $("stats").classList.add("active");
+            $("statSessions").textContent = parseMeta.sessions.length;
+            $("statTurns").textContent = parseMeta.turns;
+            $("statChars").textContent = parseMeta.chars;
+            $("statQuality").textContent = parseMeta.quality;
+        }
+
+        function loadSample() {
+            $("companyName").value = "示例出行";
+            $("companyBrief").value = "智能两轮电动车；覆盖充电、配网、物流售后";
+            $("industry").value = "mobility";
+            $("chatInput").value = SAMPLE;
+            $("fileName").textContent = "已载入内置示例对话（3 段）";
+            refreshLocalStats();
+            toast("示例对话已载入");
+        }
+
+        function resetAll() {
+            lastResult = null;
+            parseMeta = null;
+            resetSteps();
+            $("chatInput").value = "";
+            $("companyName").value = "";
+            $("companyBrief").value = "";
+            $("fileName").textContent = "";
+            $("offlineDemo").checked = false;
+            $("stats").classList.remove("active");
+            $("progress").classList.remove("active");
+            $("result").classList.remove("active");
+            $("emptyState").style.display = "block";
+            $("progressFill").style.width = "0%";
+        }
+
+        function switchPane(btn) {
+            document.querySelectorAll(".sc-rtab").forEach((b) => b.classList.remove("active"));
+            document.querySelectorAll(".pane").forEach((p) => p.classList.remove("active"));
+            btn.classList.add("active");
+            $("pane-" + btn.dataset.pane).classList.add("active");
+        }
+
+        function industryLabel(v) {
+            return ({
+                mobility: "智能出行",
+                ecommerce: "电商零售",
+                saas: "SaaS",
+                finance: "金融保险",
+                general: "通用客服"
+            })[v] || "通用客服";
+        }
+
+        async function callAPI(messages, temperature) {
+            const res = await fetch("/api/deepseek", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    password: API_PASSWORD,
+                    model: "deepseek-chat",
+                    messages,
+                    temperature: temperature == null ? 0.35 : temperature
+                })
+            });
+            if (!res.ok) {
+                const t = await res.text().catch(() => "");
+                throw new Error("API " + res.status + (t ? ": " + t.slice(0, 120) : ""));
+            }
             const data = await res.json();
-            return data.choices[0].message.content;
+            const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+            if (!content) throw new Error("API 返回为空");
+            return content;
         }
 
         function parseJSON(text) {
-            const m = text.match(/\{[\s\S]*\}/);
-            if (!m) throw new Error('无法解析结果');
+            const m = String(text).match(/\{[\s\S]*\}/);
+            if (!m) throw new Error("无法解析模型 JSON");
             return JSON.parse(m[0]);
         }
 
-        function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+        function buildOfflineResult(company, brief, meta) {
+            return {
+                summary: company + " 冷启动离线演示：基于 " + meta.sessions.length + " 段会话，覆盖充电故障、APP 配网与物流催发三类高频场景。",
+                scenarios: [
+                    { name: "充电异常排查", description: "车辆无法充电、充电器指示灯异常时的首问与排查路径。", frequency: "高", intent: "售后-充电", priority: "P0" },
+                    { name: "车辆配网 / 离线", description: "APP 显示离线、配网失败、蓝牙定位权限相关引导。", frequency: "高", intent: "使用指导-配网", priority: "P0" },
+                    { name: "物流催发 / 改派", description: "订单未发货查询、加急与物流方式变更。", frequency: "中", intent: "订单-物流", priority: "P1" }
+                ],
+                sops: [
+                    {
+                        scenario: "充电异常排查",
+                        goal: "快速判断是接触不良、供电问题还是硬件故障",
+                        steps: [
+                            "确认车型与充电方式（车充/拆电池充）",
+                            "检查充电器指示灯状态并指导重新插接",
+                            "建议更换插座并核对充电器匹配型号",
+                            "仍失败则引导售后检测与质保时效说明"
+                        ],
+                        escalation: "连续排查失败或涉及硬件更换时转售后工单"
+                    },
+                    {
+                        scenario: "车辆配网",
+                        goal: "帮助用户完成 APP 绑定与联网",
+                        steps: [
+                            "确认手机蓝牙、定位已开启且靠近车辆",
+                            "引导进入配网模式并检查 VPN 干扰",
+                            "超时失败则重启仪表后重试",
+                            "成功后提醒检查 OTA 更新"
+                        ],
+                        escalation: "多次失败且疑似硬件问题转技术支持"
+                    }
+                ],
+                faqs: [
+                    {
+                        question: "充电器红灯常亮充不进电怎么办？",
+                        answer: "请先确认充电口卡到位，并更换插座重试；若仍红灯，核对充电器型号是否匹配，必要时申请售后检测，质保范围内可更换。",
+                        category: "售后/充电",
+                        priority: "P0",
+                        similar: ["充不进电红灯", "充电器一直红灯", "车上充电没反应", "电池充不上电怎么处理"]
+                    },
+                    {
+                        question: "APP 显示车辆离线如何重新配网？",
+                        answer: "打开手机蓝牙和定位，在 APP 添加车辆并按仪表进入配网；保持两米内，关闭 VPN；失败可重启仪表后再试，成功后建议检查固件更新。",
+                        category: "使用指导/配网",
+                        priority: "P0",
+                        similar: ["车辆离线怎么配网", "配网一直转圈", "蓝牙配不上网", "APP连不上车"]
+                    },
+                    {
+                        question: "下单多日未发货可以改加急物流吗？",
+                        answer: "可以查询仓库状态并备注加急物流；若产生运费差价会短信通知，提交后一般次日揽收。",
+                        category: "订单/物流",
+                        priority: "P1",
+                        similar: ["怎么催发货", "能改顺丰吗", "订单多久发货", "想加急物流"]
+                    }
+                ],
+                risks: [
+                    { level: "中", title: "质保口径需统一", detail: "充电故障涉及质保更换时，需与售后政策文档对齐时效与责任边界。" },
+                    { level: "低", title: "示例数据偏差", detail: "当前为离线演示结果，上线前请用真实对话重跑并人工审核。" }
+                ],
+                meta: {
+                    mode: "offline-demo",
+                    company,
+                    brief,
+                    generatedAt: new Date().toISOString(),
+                    input: meta
+                }
+            };
+        }
+
+        async function analyzeWithAPI(company, brief, focus, text, meta, withSimilar) {
+            const industry = industryLabel($("industry").value);
+            const system = "你是 SmartCS 对话冷启动架构师，服务企业「" + company + "」（行业：" + industry + "；背景：" + (brief || "未提供") + "）。\n" +
+                "任务：从客服对话中产出可直接用于机器人冷启动的结构化资产。\n" +
+                "分析重心：" + focus + "。\n" +
+                "只返回合法 JSON，不要 Markdown。字段：\n" +
+                "{\n" +
+                '  "summary": "一句话总览",\n' +
+                '  "scenarios": [{"name":"","description":"","frequency":"高/中/低","intent":"意图路径","priority":"P0/P1/P2"}],\n' +
+                '  "sops": [{"scenario":"","goal":"","steps":["..."],"escalation":""}],\n' +
+                '  "faqs": [{"question":"","answer":"","category":"目录","priority":"P0/P1/P2"' + (withSimilar ? ',"similar":["口语相似问"]' : "") + "}],\n" +
+                '  "risks": [{"level":"高/中/低","title":"","detail":""}]\n' +
+                "}\n" +
+                "要求：\n" +
+                "1) 场景按业务价值排序；2) SOP 步骤可执行；3) FAQ 答案口语清晰、可播报；4) 不要编造对话中不存在的政策数字；5) 至少覆盖对话中的主要问题。";
+
+            setStep("scene", "active");
+            setProgress(35, "正在挖掘业务场景与意图…", "场景挖掘");
+            const content = await callAPI([
+                { role: "system", content: system },
+                { role: "user", content: "以下是已解析的客服对话（约 " + meta.sessions.length + " 段 / " + meta.turns + " 轮）：\n\n" + text.slice(0, 28000) }
+            ], 0.35);
+
+            setStep("scene", "done");
+            setStep("sop", "active");
+            setStep("faq", "active");
+            setProgress(70, "正在整理 SOP、FAQ 与风险点…", "SOP / FAQ");
+
+            const data = parseJSON(content);
+            data.meta = {
+                mode: "api",
+                company,
+                brief,
+                industry,
+                focus,
+                generatedAt: new Date().toISOString(),
+                input: meta
+            };
+
+            if (withSimilar) {
+                const needSimilar = (data.faqs || []).filter((f) => !Array.isArray(f.similar) || f.similar.length < 3);
+                if (needSimilar.length) {
+                    setProgress(82, "正在补齐口语相似问…", "相似问");
+                    try {
+                        const simRaw = await callAPI([
+                            { role: "system", content: '你为客服 FAQ 生成口语相似问。只返回 JSON：{"items":[{"question":"原问","similar":["..."]}]}' },
+                            { role: "user", content: JSON.stringify(needSimilar.map((f) => ({ question: f.question, answer: f.answer }))) }
+                        ], 0.5);
+                        const sim = parseJSON(simRaw);
+                        const map = new Map((sim.items || []).map((i) => [i.question, i.similar || []]));
+                        data.faqs = (data.faqs || []).map((f) => ({
+                            ...f,
+                            similar: (f.similar && f.similar.length ? f.similar : map.get(f.question)) || []
+                        }));
+                    } catch (_) { /* ignore */ }
+                }
+            }
+
+            setStep("sop", "done");
+            setStep("faq", "done");
+            return data;
+        }
 
         function renderResult(data) {
             lastResult = data;
-            document.getElementById('scenarioSection').innerHTML = `
-                <h3>📋 核心业务场景</h3>
-                ${(data.scenarios || []).map(s => `
-                    <div class="sc-item">
-                        <h4>${esc(s.name)}</h4>
-                        <p>${esc(s.description)}</p>
-                        ${s.frequency ? `<p style="margin-top:6px;font-size:12px;color:var(--accent-primary);">出现频率：${esc(s.frequency)}</p>` : ''}
-                    </div>`).join('')}`;
+            $("emptyState").style.display = "none";
+            $("result").classList.add("active");
 
-            document.getElementById('sopSection').innerHTML = `
-                <h3>📝 SOP 服务流程</h3>
-                ${(data.sops || []).map(s => `
-                    <div class="sc-item">
-                        <h4>${esc(s.scenario)}</h4>
-                        <ol>${(s.steps || []).map(step => `<li>${esc(step)}</li>`).join('')}</ol>
-                    </div>`).join('')}`;
+            const scenarios = data.scenarios || [];
+            const sops = data.sops || [];
+            const faqs = data.faqs || [];
+            const risks = data.risks || [];
 
-            document.getElementById('faqSection').innerHTML = `
-                <h3>❓ FAQ 知识库</h3>
-                ${(data.faqs || []).map(f => `
-                    <div class="sc-item">
-                        <h4>Q：${esc(f.question)}</h4>
-                        <p>A：${esc(f.answer)}</p>
-                    </div>`).join('')}`;
+            $("pane-overview").innerHTML =
+                '<div class="sc-item"><h4>冷启动摘要</h4><p>' + esc(data.summary || "已完成分析") + "</p>" +
+                '<div class="sc-meta">' +
+                '<span class="sc-chip ok">' + esc(data.meta && data.meta.mode === "offline-demo" ? "离线演示" : "API 分析") + "</span>" +
+                '<span class="sc-chip">' + scenarios.length + " 场景</span>" +
+                '<span class="sc-chip">' + sops.length + " SOP</span>" +
+                '<span class="sc-chip">' + faqs.length + " FAQ</span>" +
+                '<span class="sc-chip warn">' + risks.length + " 风险点</span>" +
+                "</div></div>" +
+                '<div class="sc-item"><h4>建议上线顺序</h4><ol>' +
+                (scenarios.slice(0, 5).map((s) => "<li><strong>" + esc(s.name) + "</strong> — " + esc(s.priority || "P1") + " / " + esc(s.frequency || "") + "</li>").join("") || "<li>暂无</li>") +
+                "</ol></div>";
 
-            document.getElementById('result').classList.add('active');
+            $("pane-scenarios").innerHTML = scenarios.length ? scenarios.map((s) =>
+                '<div class="sc-item"><h4>' + esc(s.name) + "</h4><p>" + esc(s.description) + '</p><div class="sc-meta">' +
+                (s.intent ? '<span class="sc-chip muted">' + esc(s.intent) + "</span>" : "") +
+                (s.frequency ? '<span class="sc-chip">' + esc("频次 " + s.frequency) + "</span>" : "") +
+                (s.priority ? '<span class="sc-chip ok">' + esc(s.priority) + "</span>" : "") +
+                "</div></div>"
+            ).join("") : '<div class="sc-empty">暂无场景</div>';
+
+            $("pane-sops").innerHTML = sops.length ? sops.map((s) =>
+                '<div class="sc-item"><h4>' + esc(s.scenario) + "</h4>" +
+                (s.goal ? "<p><strong>目标：</strong>" + esc(s.goal) + "</p>" : "") +
+                "<ol>" + (s.steps || []).map((step) => "<li>" + esc(step) + "</li>").join("") + "</ol>" +
+                (s.escalation ? '<p style="margin-top:8px;"><strong>升级条件：</strong>' + esc(s.escalation) + "</p>" : "") +
+                "</div>"
+            ).join("") : '<div class="sc-empty">暂无 SOP</div>';
+
+            $("pane-faqs").innerHTML = faqs.length ? faqs.map((f) =>
+                '<div class="sc-item"><h4>Q：' + esc(f.question) + "</h4><p>A：" + esc(f.answer) + '</p><div class="sc-meta">' +
+                (f.category ? '<span class="sc-chip muted">' + esc(f.category) + "</span>" : "") +
+                (f.priority ? '<span class="sc-chip">' + esc(f.priority) + "</span>" : "") +
+                "</div>" +
+                (Array.isArray(f.similar) && f.similar.length
+                    ? '<div class="sc-similar">相似问：' + f.similar.map((x) => "<span>" + esc(x) + "</span>").join("") + "</div>"
+                    : "") +
+                "</div>"
+            ).join("") : '<div class="sc-empty">暂无 FAQ</div>';
+
+            $("pane-risks").innerHTML = risks.length ? risks.map((r) =>
+                '<div class="sc-item"><h4>' + esc(r.title || "风险项") + "</h4><p>" + esc(r.detail || "") +
+                '</p><div class="sc-meta"><span class="sc-chip warn">' + esc("等级 " + (r.level || "中")) + "</span></div></div>"
+            ).join("") : '<div class="sc-empty">未发现明显风险</div>';
         }
 
         async function startAnalyze() {
-            const text = document.getElementById('chatInput').value.trim();
-            const companyName = document.getElementById('companyName').value.trim();
-            if (!text) { alert('请上传或粘贴对话记录'); return; }
-            if (!companyName) { alert('请填写品牌名称'); return; }
+            const text = $("chatInput").value.trim();
+            const company = $("companyName").value.trim();
+            const brief = $("companyBrief").value.trim();
+            const focus = $("focus").value;
+            const withSimilar = $("genSimilar").checked;
+            const offline = $("offlineDemo").checked;
 
-            const btn = document.getElementById('analyzeBtn');
+            if (!text) { toast("请先上传或粘贴对话"); return; }
+            if (!company) { toast("请填写品牌名称"); return; }
+
+            const btn = $("analyzeBtn");
             btn.disabled = true;
-            document.getElementById('loading').classList.add('active');
-            document.getElementById('result').classList.remove('active');
+            $("result").classList.remove("active");
+            $("emptyState").style.display = "none";
+            resetSteps();
 
-            const brief = document.getElementById('companyBrief').value.trim();
             try {
-                const content = await callAPI([
-                    { role: 'system', content: `你是 SmartCS 客服对话冷启动分析专家。从对话记录中挖掘业务场景、SOP 流程和 FAQ。
-企业：${companyName}，背景：${brief || '通用客服'}
-严格返回 JSON：
-{
-  "scenarios": [{"name":"场景名","description":"描述","frequency":"高/中/低"}],
-  "sops": [{"scenario":"场景","steps":["步骤1","步骤2"]}],
-  "faqs": [{"question":"用户问题","answer":"标准回答","category":"分类"}]
-}` },
-                    { role: 'user', content: `请分析以下客服对话：\n\n${text.slice(0, 30000)}` }
-                ]);
-                renderResult(parseJSON(content));
+                setStep("parse", "active");
+                setProgress(12, "正在本地解析对话…", "对话解析");
+                await sleep(250);
+                const meta = parseDialogues(text);
+                parseMeta = meta;
+                refreshLocalStats();
+                setStep("parse", "done");
+
+                let data;
+                if (offline) {
+                    setStep("scene", "active");
+                    setProgress(40, "离线演示：生成场景地图…", "场景挖掘");
+                    await sleep(350);
+                    setStep("scene", "done");
+                    setStep("sop", "active");
+                    setStep("faq", "active");
+                    setProgress(75, "离线演示：整理 SOP / FAQ…", "SOP / FAQ");
+                    await sleep(350);
+                    data = buildOfflineResult(company, brief, meta);
+                    setStep("sop", "done");
+                    setStep("faq", "done");
+                } else {
+                    try {
+                        data = await analyzeWithAPI(company, brief, focus, text, meta, withSimilar);
+                    } catch (err) {
+                        console.warn(err);
+                        toast("API 暂不可用，已切换离线演示结果");
+                        data = buildOfflineResult(company, brief, meta);
+                        setStep("scene", "done");
+                        setStep("sop", "done");
+                        setStep("faq", "done");
+                    }
+                }
+
+                setStep("review", "active");
+                setProgress(95, "正在渲染审核视图…", "审核导出");
+                renderResult(data);
+                setStep("review", "done");
+                setProgress(100, "冷启动分析完成", "完成");
+                toast("分析完成");
             } catch (e) {
-                alert('分析失败：' + e.message);
+                toast("分析失败：" + e.message);
+                $("emptyState").style.display = "block";
             } finally {
                 btn.disabled = false;
-                document.getElementById('loading').classList.remove('active');
             }
+        }
+
+        function downloadBlob(filename, content, type) {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([content], { type: type }));
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
         }
 
         function downloadJSON() {
             if (!lastResult) return;
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' }));
-            a.download = 'smartcs-coldstart-result.json';
-            a.click();
+            downloadBlob("smartcs-coldstart.json", JSON.stringify(lastResult, null, 2), "application/json");
+        }
+
+        function downloadMarkdown() {
+            if (!lastResult) return;
+            const d = lastResult;
+            let md = "# " + ((d.meta && d.meta.company) || "SmartCS") + " 对话冷启动报告\n\n";
+            md += (d.summary || "") + "\n\n## 场景\n";
+            (d.scenarios || []).forEach((s) => {
+                md += "\n### " + s.name + "\n- 描述：" + (s.description || "") + "\n- 意图：" + (s.intent || "") + "\n- 频次：" + (s.frequency || "") + "\n- 优先级：" + (s.priority || "") + "\n";
+            });
+            md += "\n## SOP\n";
+            (d.sops || []).forEach((s) => {
+                md += "\n### " + s.scenario + "\n";
+                if (s.goal) md += "目标：" + s.goal + "\n";
+                (s.steps || []).forEach((step, i) => { md += (i + 1) + ". " + step + "\n"; });
+                if (s.escalation) md += "升级：" + s.escalation + "\n";
+            });
+            md += "\n## FAQ\n";
+            (d.faqs || []).forEach((f) => {
+                md += "\n### Q：" + f.question + "\nA：" + f.answer + "\n";
+                if (f.similar && f.similar.length) md += "相似问：" + f.similar.join(" / ") + "\n";
+            });
+            downloadBlob("smartcs-coldstart.md", md, "text/markdown;charset=utf-8");
+        }
+
+        function downloadCSV() {
+            if (!lastResult || !lastResult.faqs || !lastResult.faqs.length) { toast("没有可导出的 FAQ"); return; }
+            const rows = [["category", "question", "answer", "priority", "similar"]];
+            lastResult.faqs.forEach((f) => {
+                rows.push([
+                    f.category || "",
+                    f.question || "",
+                    f.answer || "",
+                    f.priority || "",
+                    (f.similar || []).join("|")
+                ].map((v) => '"' + String(v).replace(/"/g, '""') + '"'));
+            });
+            downloadBlob("smartcs-coldstart-faq.csv", rows.map((r) => r.join(",")).join("\n"), "text/csv;charset=utf-8");
         }
 
         function copyFAQ() {
-            if (!lastResult?.faqs) return;
-            const text = lastResult.faqs.map(f => `Q：${f.question}\nA：${f.answer}`).join('\n\n');
-            navigator.clipboard.writeText(text).then(() => alert('FAQ 已复制'));
+            if (!lastResult || !lastResult.faqs || !lastResult.faqs.length) return;
+            const text = lastResult.faqs.map((f) => {
+                const sims = f.similar && f.similar.length ? "\n相似问：" + f.similar.join("；") : "";
+                return "Q：" + f.question + "\nA：" + f.answer + sims;
+            }).join("\n\n");
+            navigator.clipboard.writeText(text).then(() => toast("FAQ 已复制")).catch(() => toast("复制失败"));
         }
+
+        $("fileInput").addEventListener("change", async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            $("fileName").textContent = "已选择：" + file.name;
+            $("chatInput").value = await file.text();
+            refreshLocalStats();
+        });
+        $("chatInput").addEventListener("input", refreshLocalStats);
+        $("analyzeBtn").addEventListener("click", startAnalyze);
+        $("sampleBtn").addEventListener("click", loadSample);
+        $("resetBtn").addEventListener("click", resetAll);
+        $("btnJson").addEventListener("click", downloadJSON);
+        $("btnMd").addEventListener("click", downloadMarkdown);
+        $("btnCsv").addEventListener("click", downloadCSV);
+        $("btnCopy").addEventListener("click", copyFAQ);
+        $("resultTabs").addEventListener("click", (e) => {
+            const btn = e.target.closest(".sc-rtab");
+            if (btn) switchPane(btn);
+        });
+    })();
     </script>
 </body>
 </html>

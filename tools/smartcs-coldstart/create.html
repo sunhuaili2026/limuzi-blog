@@ -1,135 +1,195 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新建分析 - AI客服冷启动系统</title>
-    <link rel="stylesheet" href="../../style.css">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="app.css">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>新建分析 · AI客服冷启动系统</title>
+  <meta name="description" content="创建冷启动分析任务：配置品牌、上传对话、确认后启动。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./app.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body data-page="create">
-    <nav class="navbar" id="navbar">
-        <div class="nav-container">
-            <a href="/index.html" class="nav-logo"><span class="logo-icon">◆</span><span class="logo-text">李子木</span></a>
-            <ul class="nav-menu">
-                <li><a href="/index.html" class="nav-link">首页</a></li>
-                <li><a href="/blog.html" class="nav-link">博客</a></li>
-                <li><a href="/tools.html" class="nav-link active">工具</a></li>
-            </ul>
-            <button class="nav-toggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+  <a class="skip-link" href="#main">跳到主内容</a>
+  <div class="app-shell">
+    <aside class="app-sidebar" aria-label="主导航">
+      <a class="app-brand" href="./index.html">
+        <div class="app-brand-mark">CS</div>
+        <div class="app-brand-text">
+          <strong>AI客服冷启动</strong>
+          <span>Cold Start Studio</span>
         </div>
-    </nav>
+      </a>
+      <nav class="app-nav">
+        <a href="./index.html"><span class="ico">◆</span>工作台</a>
+        <a class="active" href="./create.html" aria-current="page"><span class="ico">＋</span>新建分析</a>
+        <a href="./index.html"><span class="ico">▣</span>知识产出</a>
+      </nav>
+      <div class="app-side-block">
+        <div class="side-card sc-panel" style="padding:14px;">
+          <h4>创建指引</h4>
+          <p>按 SaaS 标准流程分三步完成：品牌语境 → 对话资产 → 确认启动。创建后自动进入任务详情跟踪进度。</p>
+        </div>
+      </div>
+      <div class="app-side-foot">
+        <a href="./index.html">← 返回工作台</a>
+      </div>
+    </aside>
 
-    <section class="page-header" style="padding:110px 0 20px;">
-        <div class="container sc-shell">
-            <nav class="sc-subnav" aria-label="冷启动系统导航">
-                <a href="index.html" class="">任务台</a>
-                <a href="create.html" class="active">新建分析</a>
-                <a href="task.html" class="">任务详情</a>
-                <span class="spacer"></span>
-                <a href="create.html" class="sc-btn primary inline" style="width:auto;padding:8px 14px;">+ 新建任务</a>
-            </nav>
-            <div class="sc-banner" id="globalBanner"></div>
-            
-            <div class="sc-page-hero">
-                <div class="sc-breadcrumb"><a href="index.html">任务台</a> / 新建分析</div>
-                <h1>新建分析任务</h1>
-                <p>配置品牌信息并上传对话语料。创建后会自动跳转到任务详情页，实时查看分批进度与结果。</p>
+    <div class="app-main">
+      <header class="app-topbar">
+        <div class="app-topbar-left">
+          <div class="app-crumb"><a href="./index.html">工作台</a> / 新建分析</div>
+          <h1>新建分析</h1>
+        </div>
+        <div class="app-topbar-actions">
+          <a class="sc-btn ghost" href="./index.html">取消</a>
+        </div>
+      </header>
+
+      <main id="main" class="app-content">
+        <div class="sc-banner" id="globalBanner"></div>
+
+        <div class="wizard-steps" role="list">
+          <div class="wizard-step active" data-step-indicator="1">
+            <div class="n">STEP 01</div>
+            <div class="t">品牌与范围</div>
+            <div class="d">公司信息与分析重心</div>
+          </div>
+          <div class="wizard-step" data-step-indicator="2">
+            <div class="n">STEP 02</div>
+            <div class="t">对话资产</div>
+            <div class="d">粘贴或上传客服记录</div>
+          </div>
+          <div class="wizard-step" data-step-indicator="3">
+            <div class="n">STEP 03</div>
+            <div class="t">确认启动</div>
+            <div class="d">检查摘要后创建任务</div>
+          </div>
+        </div>
+
+        <div class="create-grid">
+          <section class="sc-panel">
+            <!-- Step 1 -->
+            <div class="wizard-pane active" data-wizard-pane="1">
+              <h3>品牌与分析范围</h3>
+              <p class="sc-hint" style="margin-top:-6px;margin-bottom:14px;">先对齐客户品牌与行业语境，后续话术与 FAQ 会更贴近业务。</p>
+
+              <div class="sc-field">
+                <label for="companyName">公司 / 品牌名称</label>
+                <input id="companyName" type="text" placeholder="例如：示例出行（可留空）" autocomplete="organization" />
+              </div>
+              <div class="sc-field">
+                <label for="industry">行业</label>
+                <select id="industry">
+                  <option value="mobility">智能出行 / 两轮电动</option>
+                  <option value="ecommerce">电商零售</option>
+                  <option value="saas">SaaS / 软件</option>
+                  <option value="finance">金融保险</option>
+                  <option value="general">通用客服</option>
+                </select>
+              </div>
+              <div class="sc-field">
+                <label for="companyBrief">业务背景</label>
+                <textarea id="companyBrief" placeholder="产品线、售后渠道、常见问题范围…"></textarea>
+              </div>
+              <div class="sc-field">
+                <label for="focus">分析重心</label>
+                <select id="focus">
+                  <option value="balanced">均衡（场景 + SOP + FAQ）</option>
+                  <option value="sop">偏流程（SOP 优先）</option>
+                  <option value="faq">偏知识（FAQ 优先）</option>
+                </select>
+              </div>
+              <div class="sc-field">
+                <label for="taskName">任务名称（可选）</label>
+                <input id="taskName" type="text" placeholder="例如：充电售后冷启动-0915" />
+              </div>
+              <label class="sc-check"><input type="checkbox" id="genSimilar" checked /><span>为 FAQ 生成口语相似问</span></label>
+              <label class="sc-check"><input type="checkbox" id="offlineDemo" checked /><span>离线演示优先（API 不可用时也可用）</span></label>
             </div>
 
-            <div class="create-layout">
-                <div class="sc-panel">
-                    <h3>任务配置</h3>
-                    <div class="sc-field">
-                        <label for="taskName">任务名称</label>
-                        <input id="taskName" type="text" placeholder="例如：充电售后冷启动-0915">
-                    </div>
-                    <div class="sc-field">
-                        <label for="companyName">品牌名称</label>
-                        <input id="companyName" type="text" placeholder="例如：示例出行（可留空）">
-                    </div>
-                    <div class="sc-field">
-                        <label for="industry">行业</label>
-                        <select id="industry">
-                            <option value="mobility">智能出行 / 两轮电动</option>
-                            <option value="ecommerce">电商零售</option>
-                            <option value="saas">SaaS / 软件</option>
-                            <option value="finance">金融保险</option>
-                            <option value="general">通用客服</option>
-                        </select>
-                    </div>
-                    <div class="sc-field">
-                        <label for="companyBrief">业务背景</label>
-                        <textarea id="companyBrief" placeholder="产品线、售后渠道、常见问题范围…"></textarea>
-                    </div>
-                    <div class="sc-field">
-                        <label for="focus">分析重心</label>
-                        <select id="focus">
-                            <option value="balanced">均衡（场景 + SOP + FAQ）</option>
-                            <option value="sop">偏流程（SOP 优先）</option>
-                            <option value="faq">偏知识（FAQ 优先）</option>
-                        </select>
-                    </div>
-                    <label class="sc-check"><input type="checkbox" id="genSimilar" checked><span>为 FAQ 生成口语相似问</span></label>
-                    <label class="sc-check"><input type="checkbox" id="offlineDemo" checked><span>离线演示优先（API 不可用时也可用）</span></label>
+            <!-- Step 2 -->
+            <div class="wizard-pane" data-wizard-pane="2">
+              <h3>导入客服对话资产</h3>
+              <p class="sc-hint" style="margin-top:-6px;margin-bottom:14px;">支持粘贴文本，或上传 TXT / CSV / Excel。大文件会自动分批分析。</p>
 
-                    <label class="sc-file" for="fileInput">
-                        上传 CSV / TXT / JSON / Excel
-                        <input type="file" id="fileInput" accept=".csv,.txt,.json,.md,.xlsx,.xls">
-                    </label>
-                    <div id="fileName" class="sc-hint"></div>
+              <label class="sc-file" for="fileInput" id="uploadZone">
+                <strong>拖拽或点击上传文件</strong>
+                TXT / CSV / JSON / Excel · 建议保留会话分隔与角色标记
+                <input type="file" id="fileInput" accept=".csv,.txt,.json,.md,.xlsx,.xls" />
+              </label>
+              <div id="fileName" class="sc-hint"></div>
 
-                    <div class="sc-field" style="margin-top:12px;">
-                        <label>输入内容</label>
-                        <div id="inputSummary" class="sc-hint">尚未载入内容。请上传 Excel/CSV，或点击「载入示例对话」。</div>
-                        <textarea id="chatInput" hidden aria-hidden="true"></textarea>
-                    </div>
+              <div class="sc-field" style="margin-top:12px;">
+                <label>输入摘要</label>
+                <div id="inputSummary">尚未载入内容。请上传文件，或点击「载入示例对话」。</div>
+                <textarea id="chatInput" hidden aria-hidden="true"></textarea>
+              </div>
 
-                    <div class="sc-stats" id="inputStats">
-                        <div class="sc-stat"><div class="num" id="statSessions">0</div><div class="lbl">会话段</div></div>
-                        <div class="sc-stat"><div class="num" id="statTurns">0</div><div class="lbl">轮次</div></div>
-                        <div class="sc-stat"><div class="num" id="statChars">0</div><div class="lbl">字符</div></div>
-                        <div class="sc-stat"><div class="num" id="statQuality">-</div><div class="lbl">质量</div></div>
-                    </div>
+              <div class="sc-stats" id="inputStats">
+                <div class="sc-stat"><div class="num" id="statSessions">0</div><div class="lbl">会话段</div></div>
+                <div class="sc-stat"><div class="num" id="statTurns">0</div><div class="lbl">轮次</div></div>
+                <div class="sc-stat"><div class="num" id="statChars">0</div><div class="lbl">字符</div></div>
+                <div class="sc-stat"><div class="num" id="statQuality">-</div><div class="lbl">质量</div></div>
+              </div>
 
-                    <div class="sc-actions">
-                        <button class="sc-btn primary" id="createTaskBtn" type="button">创建并开始任务</button>
-                        <button class="sc-btn" id="sampleBtn" type="button">载入示例对话</button>
-                        <button class="sc-btn ghost" id="clearInputBtn" type="button">清空输入</button>
-                    </div>
-                </div>
-
-                <aside class="sc-panel create-side">
-                    <h3>流程说明</h3>
-                    <div class="sc-item">
-                        <h4>1. 配置品牌</h4>
-                        <p>填写品牌、行业与业务背景，便于输出贴合业务的场景与口径。</p>
-                    </div>
-                    <div class="sc-item">
-                        <h4>2. 上传语料</h4>
-                        <p>支持 Excel/CSV/对话文本。大文件会自动分批，不再硬截断。</p>
-                    </div>
-                    <div class="sc-item">
-                        <h4>3. 生成任务</h4>
-                        <p>创建后跳转详情页，跟踪解析 → 场景 → SOP → FAQ → 导出。</p>
-                    </div>
-                    <div class="sc-item">
-                        <h4>4. 交付客户</h4>
-                        <p>在详情页导出静态可视化报告，可直接发给客户打开或打印。</p>
-                    </div>
-                </aside>
+              <div class="sc-actions" style="grid-template-columns:1fr 1fr;">
+                <button type="button" class="sc-btn" id="sampleBtn">载入示例对话</button>
+                <button type="button" class="sc-btn ghost" id="clearInputBtn">清空输入</button>
+              </div>
             </div>
 
-        </div>
-    </section>
+            <!-- Step 3 -->
+            <div class="wizard-pane" data-wizard-pane="3">
+              <h3>确认并启动任务</h3>
+              <p class="sc-hint" style="margin-top:-6px;margin-bottom:14px;">检查摘要无误后创建任务；系统会跳转到任务详情页跟踪进度。</p>
 
-    <footer class="footer">
-        <div class="container"><div class="footer-bottom"><p>&copy; 2026 李子木</p></div></div>
-    </footer>
-    <div class="sc-toast" id="toast"></div>
-    <script src="../../script.js"></script>
-    <script src="app.js"></script>
+              <div class="sc-item" id="confirmSummary">
+                <div class="ov-row"><span>品牌</span><strong id="confirmBrand">—</strong></div>
+                <div class="ov-row"><span>行业 / 重心</span><strong id="confirmScope">—</strong></div>
+                <div class="ov-row"><span>对话规模</span><strong id="confirmScale">—</strong></div>
+                <div class="ov-row"><span>运行模式</span><strong id="confirmMode">—</strong></div>
+                <div class="ov-row"><span>任务名称</span><strong id="confirmName">—</strong></div>
+              </div>
+
+              <div class="sc-item" style="margin-top:12px;">
+                <h4>启动后你会得到</h4>
+                <ul class="ov-list">
+                  <li>任务状态机：排队 → 分析中 → 完成 / 失败</li>
+                  <li>大文件自动分批合并，无需手动拆分</li>
+                  <li>可导出 JSON / Markdown / CSV 与客户可视化报告</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="sticky-actions">
+              <button type="button" class="sc-btn ghost" id="wizardBackBtn" style="visibility:hidden;">上一步</button>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="button" class="sc-btn" id="wizardNextBtn">下一步</button>
+                <button type="button" class="sc-btn primary" id="createTaskBtn" style="display:none;">创建并开始任务</button>
+              </div>
+            </div>
+          </section>
+
+          <aside>
+            <div class="sc-panel side-card">
+              <h4>为什么要分步？</h4>
+              <p>冷启动交付通常先对齐品牌口径，再导入语料，最后确认范围。分步降低一次性填表的认知负担。</p>
+            </div>
+            <div class="sc-panel side-card" style="margin-top:12px;">
+              <h4>交付链路</h4>
+              <p>1. 配置品牌 → 2. 上传语料 → 3. 生成任务 → 4. 详情跟踪 → 5. 导出报告给客户。</p>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="sc-toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js"></script>
 </body>
 </html>

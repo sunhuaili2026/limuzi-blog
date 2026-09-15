@@ -116,11 +116,14 @@
               <h3>导入客服对话资产</h3>
               <p class="sc-hint" style="margin-top:-6px;margin-bottom:14px;">支持粘贴文本，或上传 TXT / CSV / Excel。大文件会自动分批分析。</p>
 
-              <label class="sc-file" for="fileInput" id="uploadZone">
-                <strong>拖拽或点击上传文件</strong>
-                TXT / CSV / JSON / Excel · 建议保留会话分隔与角色标记
-                <input type="file" id="fileInput" accept=".csv,.txt,.json,.md,.xlsx,.xls" />
-              </label>
+              <div class="sc-file" id="uploadZone" tabindex="0" aria-label="上传对话文件">
+                <strong>拖拽文件到此处，或点击选择</strong>
+                <span class="sc-file-hint">TXT / CSV / JSON / Excel · 建议保留会话分隔与角色标记</span>
+                <div class="sc-file-actions">
+                  <button type="button" class="sc-btn" id="pickFileBtn">选择文件</button>
+                </div>
+                <input type="file" id="fileInput" accept=".csv,.txt,.json,.md,.xlsx,.xls,text/plain,text/csv,application/json,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+              </div>
               <div id="fileName" class="sc-hint"></div>
 
               <div class="sc-field" style="margin-top:12px;">

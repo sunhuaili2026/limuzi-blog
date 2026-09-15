@@ -1330,10 +1330,9 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:v
             }
         });
 
-        on("fileInput", "change", async (e) => {
-            const file = e.target.files && e.target.files[0];
+        async function ingestUploadedFile(file) {
             if (!file) return;
-            $("fileName").textContent = "正在解析：" + file.name + " …";
+            if ($("fileName")) $("fileName").textContent = "正在解析：" + file.name + " …";
             try {
                 const { text, meta } = await readUploadFile(file);
                 if (looksBinary(text)) throw new Error("解析结果仍像乱码，请检查表头是否含问题/答案列");
@@ -1345,8 +1344,8 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:v
                 }
                 const batchHint = Math.max(1, Math.ceil(body.length / BATCH_CHARS));
                 if (batchHint > 1) note += (note ? " " : "") + "· 将分 " + batchHint + " 批处理（不截断会话）";
-                $("chatInput").value = body;
-                $("fileName").textContent = "已选择：" + file.name + " · " + meta + (note ? " " + note : "");
+                if ($("chatInput")) $("chatInput").value = body;
+                if ($("fileName")) $("fileName").textContent = "已选择：" + file.name + " · " + meta + (note ? " " + note : "");
                 if ($("taskName") && !$("taskName").value.trim()) $("taskName").value = file.name.replace(/\.[^.]+$/, "") + "-冷启动";
                 refreshInputStats();
                 updateConfirmSummary();
@@ -1360,7 +1359,58 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:v
                 banner("上传失败：" + (err && err.message ? err.message : "无法解析"), "err");
                 toast("上传失败");
             }
+        }
+
+        on("fileInput", "change", async (e) => {
+            const file = e.target.files && e.target.files[0];
+            await ingestUploadedFile(file);
         });
+
+        function openFilePicker(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const input = $("fileInput");
+            if (input) input.click();
+        }
+
+        on("pickFileBtn", "click", openFilePicker);
+
+        // 拖拽上传 + 键盘可访问；透明 file input 铺满热区承接点击
+        const zone = $("uploadZone");
+        if (zone) {
+            ["dragenter", "dragover"].forEach((ev) => {
+                zone.addEventListener(ev, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    zone.classList.add("is-dragover");
+                });
+            });
+            ["dragleave", "drop"].forEach((ev) => {
+                zone.addEventListener(ev, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    zone.classList.remove("is-dragover");
+                });
+            });
+            zone.addEventListener("drop", async (e) => {
+                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (!file) return;
+                if ($("fileInput")) {
+                    try {
+                        const dt = new DataTransfer();
+                        dt.items.add(file);
+                        $("fileInput").files = dt.files;
+                    } catch (_) { /* 部分浏览器只读 files，忽略同步即可 */ }
+                }
+                await ingestUploadedFile(file);
+            });
+            zone.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" || e.key === " ") openFilePicker(e);
+            });
+        }
+
         on("chatInput", "input", () => { refreshInputStats(); updateConfirmSummary(); });
         on("sampleBtn", "click", () => {
             if ($("companyName")) $("companyName").value = "示例出行";

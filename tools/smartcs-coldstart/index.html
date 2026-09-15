@@ -18,12 +18,15 @@
         }
         body { font-family: "IBM Plex Sans", system-ui, sans-serif; }
         .sc-wrap { max-width: 1280px; margin: 0 auto; }
-        .sc-hero { margin-bottom: 18px; }
+        .sc-hero { margin-bottom: 18px; text-align: center; }
         .sc-hero h1 {
             font-size: clamp(28px, 4vw, 38px); letter-spacing: -0.02em;
             margin: 8px 0 8px; line-height: 1.15;
         }
-        .sc-hero p { color: var(--text-secondary); font-size: 15px; max-width: 62ch; }
+        .sc-hero p {
+            color: var(--text-secondary); font-size: 15px; max-width: 62ch;
+            margin: 0 auto; line-height: 1.7;
+        }
         .sc-layout {
             display: grid;
             grid-template-columns: 300px 280px 1fr;
@@ -69,6 +72,11 @@
         .sc-btn:disabled { opacity: .5; cursor: not-allowed; }
         .sc-actions { display: grid; gap: 8px; margin-top: 10px; }
         .sc-hint { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 8px; }
+        #inputSummary {
+            margin-top: 0; padding: 10px 12px; border-radius: 10px;
+            border: 1px solid var(--sc-line); background: rgba(15,23,42,.45);
+            color: var(--text-secondary);
+        }
         .sc-textarea {
             width: 100%; min-height: 160px; resize: vertical;
             background: rgba(15,23,42,.75); border: 1px solid var(--sc-line); border-radius: 12px;
@@ -238,11 +246,9 @@
                     <div id="fileName" class="sc-hint"></div>
 
                     <div class="sc-field" style="margin-top:10px;">
-                        <label for="chatInput">对话 / FAQ 文本 *</label>
-                        <textarea class="sc-textarea" id="chatInput" placeholder="粘贴客服对话，或上传表格后自动转换…
-
-客户：订单还没发货
-客服：请提供订单号"></textarea>
+                        <label>输入内容</label>
+                        <div id="inputSummary" class="sc-hint">尚未载入内容。请上传 Excel/CSV，或点击「载入示例对话」。</div>
+                        <textarea id="chatInput" hidden aria-hidden="true"></textarea>
                     </div>
                     <div class="sc-stats" id="inputStats">
                         <div class="sc-stat"><div class="num" id="statSessions">0</div><div class="lbl">会话段</div></div>
@@ -340,7 +346,9 @@
     (function () {
         const API_PASSWORD = "limuzi2025";
         const STORAGE_KEY = "smartcs_coldstart_tasks_v1";
-        const MAX_INPUT_CHARS = 120000;
+        const BATCH_CHARS = 28000;
+        const MAX_STORE_CHARS = 8000;
+        const MAX_INPUT_CHARS = 2000000;
         const API_TIMEOUT_MS = 18000;
         const BINARY_HINT = /PK\x03\x04|docProps\/|xl\/|\[Content_Types\]\.xml|\x00/;
 
@@ -348,6 +356,13 @@
         let tasks = loadTasks();
         let activeTaskId = tasks[0] ? tasks[0].id : null;
         let running = false;
+        /** @type {Map<string, string>} */
+        const inputStore = new Map();
+        tasks.forEach((task) => {
+            if (task && task.id && typeof task.input === "string" && task.inputChars && task.input.length < task.inputChars) {
+                /* full text not restored from localStorage preview */
+            }
+        });
 
         const SAMPLE = `客户：我的车充不进电，充电器灯是红的
 客服：您好，请问是哪款车型？电池是否在车上充电？
@@ -413,7 +428,24 @@
             } catch (_) { return []; }
         }
         function saveTasks() {
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks.slice(0, 30))); } catch (_) {}
+            try {
+                const slim = tasks.slice(0, 30).map((task) => {
+                    const copy = Object.assign({}, task);
+                    if (typeof copy.input === "string" && copy.input.length > MAX_STORE_CHARS) {
+                        if (copy.id) inputStore.set(copy.id, copy.input);
+                        copy.inputChars = copy.input.length;
+                        copy.inputPreview = copy.input.slice(0, MAX_STORE_CHARS);
+                        copy.input = copy.inputPreview;
+                    }
+                    return copy;
+                });
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
+            } catch (_) {}
+        }
+        function getTaskInput(task) {
+            if (!task) return "";
+            if (task.id && inputStore.has(task.id)) return inputStore.get(task.id);
+            return task.input || "";
         }
         function getTask(id) { return tasks.find((t) => t.id === id) || null; }
         function setActive(id) {
@@ -463,8 +495,116 @@
             $("statTurns").textContent = meta.turns;
             $("statChars").textContent = meta.chars;
             $("statQuality").textContent = meta.quality;
+            updateInputSummary(meta);
             return meta;
         }
+
+        function updateInputSummary(meta, extra) {
+            const el = $("inputSummary");
+            if (!el) return;
+            if (!meta || !meta.chars) {
+                el.textContent = "尚未载入内容。请上传 Excel/CSV，或点击「载入示例对话」。";
+                return;
+            }
+            const batches = Math.max(1, Math.ceil(meta.chars / BATCH_CHARS));
+            let msg = "已载入 " + meta.sessions.length + " 段 / " + meta.turns + " 轮 / " + meta.chars + " 字（全文不展示，仅用于分析）";
+            if (batches > 1) msg += " · 将自动分 " + batches + " 批处理";
+            if (extra) msg += " · " + extra;
+            el.textContent = msg;
+        }
+
+        function splitTextIntoBatches(text, maxChars) {
+            const limit = maxChars || BATCH_CHARS;
+            const meta = parseDialogues(text);
+            const sessions = (meta.sessions && meta.sessions.length)
+                ? meta.sessions
+                : [{ id: 1, raw: text, lines: 0, turns: 0 }];
+            const batches = [];
+            let buf = [];
+            let size = 0;
+            const sep = "\n\n——会话——\n\n";
+            sessions.forEach((s) => {
+                const chunk = String(s.raw || "").trim();
+                if (!chunk) return;
+                const add = chunk.length + (buf.length ? sep.length : 0);
+                if (buf.length && size + add > limit) {
+                    batches.push(buf.join(sep));
+                    buf = [chunk];
+                    size = chunk.length;
+                } else {
+                    buf.push(chunk);
+                    size += add;
+                }
+            });
+            if (buf.length) batches.push(buf.join(sep));
+            if (!batches.length && String(text || "").trim()) {
+                const raw = String(text).trim();
+                for (let i = 0; i < raw.length; i += limit) batches.push(raw.slice(i, i + limit));
+            }
+            return batches;
+        }
+
+        function normKey(s) {
+            return String(s || "").toLowerCase().replace(/\s+/g, "").slice(0, 80);
+        }
+
+        function mergeAnalysisResults(parts, company, brief, fullMeta, mode) {
+            const scenarios = [];
+            const sops = [];
+            const faqs = [];
+            const risks = [];
+            const seenSc = new Set();
+            const seenSop = new Set();
+            const seenFaq = new Set();
+            const seenRisk = new Set();
+            (parts || []).forEach((p) => {
+                if (!p) return;
+                (p.scenarios || p.scenes || []).forEach((s) => {
+                    const k = normKey(s.name || s.title);
+                    if (!k || seenSc.has(k)) return;
+                    seenSc.add(k);
+                    scenarios.push(s);
+                });
+                (p.sops || []).forEach((s) => {
+                    const k = normKey(s.scenario || s.name);
+                    if (!k || seenSop.has(k)) return;
+                    seenSop.add(k);
+                    sops.push(s);
+                });
+                (p.faqs || []).forEach((f) => {
+                    const k = normKey(f.question || f.q);
+                    if (!k || seenFaq.has(k)) return;
+                    seenFaq.add(k);
+                    faqs.push(f);
+                });
+                (p.risks || []).forEach((r) => {
+                    const k = normKey(r.title || r.name);
+                    if (!k || seenRisk.has(k)) return;
+                    seenRisk.add(k);
+                    risks.push(r);
+                });
+            });
+            const base = parts && parts[0] ? parts[0] : {};
+            return {
+                summary: company + " 冷启动任务完成（" + (mode || "batch") + "）：共处理 " +
+                    ((fullMeta && fullMeta.sessions) ? fullMeta.sessions.length : 0) + " 段输入，分 " +
+                    (parts ? parts.length : 0) + " 批聚合 → " + scenarios.length + " 场景 / " +
+                    sops.length + " SOP / " + faqs.length + " FAQ。",
+                scenarios: scenarios.length ? scenarios : (base.scenarios || base.scenes || []),
+                sops: sops.length ? sops : (base.sops || []),
+                faqs: faqs.length ? faqs : (base.faqs || []),
+                risks: risks.length ? risks : (base.risks || []),
+                meta: {
+                    mode: mode || "batch",
+                    company: company,
+                    brief: brief,
+                    generatedAt: nowISO(),
+                    input: fullMeta,
+                    batches: parts ? parts.length : 0
+                }
+            };
+        }
+
 
         function industryLabel(v) {
             return ({ mobility: "智能出行", ecommerce: "电商零售", saas: "SaaS", finance: "金融保险", general: "通用客服" })[v] || "通用客服";
@@ -546,6 +686,35 @@
             const text = await file.text();
             if (looksBinary(text)) throw new Error("检测到二进制乱码。请上传 .xlsx/.csv，或纯文本对话，不要当 TXT 打开 Excel。");
             return { text, meta: "已读取文本文件" };
+        }
+
+        function extractFaqsFromText(text, limit) {
+            const max = limit || 8;
+            const lines = String(text || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+            const faqs = [];
+            const seen = new Set();
+            for (let i = 0; i < lines.length; i++) {
+                const qLine = lines[i];
+                const aLine = lines[i + 1] || "";
+                const qm = qLine.match(/^(?:客户|用户|user)[:：]\s*(.+)$/i);
+                const am = aLine.match(/^(?:客服|坐席|agent|bot)[:：]\s*(.+)$/i);
+                if (!qm) continue;
+                const question = qm[1].trim();
+                const answer = am ? am[1].trim() : "请结合业务背景给出标准答复。";
+                const key = question.toLowerCase().replace(/\s+/g, "").slice(0, 40);
+                if (!question || seen.has(key)) continue;
+                seen.add(key);
+                faqs.push({
+                    question: question.slice(0, 80),
+                    answer: answer.slice(0, 160),
+                    category: "批量抽取",
+                    priority: "P1",
+                    similar: []
+                });
+                if (am) i += 1;
+                if (faqs.length >= max) break;
+            }
+            return faqs;
         }
 
         function buildOfflineResult(company, brief, meta) {
@@ -773,7 +942,7 @@
             $("pane-overview").innerHTML =
                 '<div class="sc-item"><h4>冷启动摘要</h4><p>' + esc(data.summary || "已完成分析") + "</p>" +
                 '<div class="sc-chips">' +
-                '<span class="sc-chip ok">' + esc(data.meta && data.meta.mode === "offline-demo" ? "离线演示" : "API 分析") + "</span>" +
+                '<span class="sc-chip ok">' + esc((data.meta && String(data.meta.mode || "").indexOf("offline") >= 0) ? ("离线分批 ×" + (data.meta.batches || 1)) : ("API 分批 ×" + ((data.meta && data.meta.batches) || 1))) + "</span>" +
                 '<span class="sc-chip">' + scenarios.length + " 场景</span>" +
                 '<span class="sc-chip">' + sops.length + " SOP</span>" +
                 '<span class="sc-chip">' + faqs.length + " FAQ</span>" +
@@ -850,7 +1019,10 @@
             }
 
             let body = text;
-            if (body.length > MAX_INPUT_CHARS) body = body.slice(0, MAX_INPUT_CHARS);
+            if (body.length > MAX_INPUT_CHARS) {
+                toast("文件过大，已限制在 " + MAX_INPUT_CHARS + " 字内（约可覆盖海量会话，将自动分批）");
+                body = body.slice(0, MAX_INPUT_CHARS);
+            }
             if (!name) {
                 name = company + "冷启动-" + fmtTime(nowISO()).replace(" ", "-");
                 $("taskName").value = name;
@@ -870,6 +1042,7 @@
                 result: null,
                 error: ""
             };
+            if (task.id) inputStore.set(task.id, body);
             tasks.unshift(task);
             saveTasks();
             setActive(task.id);
@@ -885,51 +1058,91 @@
             if (!task) return;
             running = true;
             const btn = $("createTaskBtn");
-            const prevLabel = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = "任务执行中…";
+            const prevLabel = btn ? btn.textContent : "";
+            if (btn) { btn.disabled = true; btn.textContent = "任务执行中…"; }
             banner("任务「" + task.name + "」已进入执行队列，请看右侧进度条。", "");
             setActive(taskId);
 
             try {
-                await updateTaskProgress(taskId, "parse", 12, "正在本地解析输入…");
-                const meta = parseDialogues(task.input);
+                const fullText = getTaskInput(task) || task.input || "";
+                if (task.id) inputStore.set(task.id, fullText);
+
+                await updateTaskProgress(taskId, "parse", 8, "正在本地解析输入…");
+                const meta = parseDialogues(fullText);
                 task.inputMeta = meta;
+                const batches = splitTextIntoBatches(fullText, BATCH_CHARS);
+                task.batchCount = batches.length;
+                await updateTaskProgress(taskId, "parse", 14, "已解析 " + meta.sessions.length + " 段，将分 " + batches.length + " 批处理…");
 
                 let data;
                 if (task.config.offlineDemo) {
-                    await updateTaskProgress(taskId, "scene", 40, "离线演示：生成场景地图…");
-                    await sleep(280);
-                    await updateTaskProgress(taskId, "sop", 65, "离线演示：整理 SOP…");
-                    await sleep(220);
-                    await updateTaskProgress(taskId, "faq", 85, "离线演示：整理 FAQ…");
-                    await sleep(220);
-                    data = buildOfflineResult(task.config.company, task.config.brief, meta);
+                    const parts = [];
+                    for (let i = 0; i < batches.length; i++) {
+                        const pct = 20 + Math.floor(((i + 1) / batches.length) * 65);
+                        await updateTaskProgress(taskId, i < batches.length / 2 ? "scene" : "faq", pct,
+                            "离线分批处理 " + (i + 1) + "/" + batches.length + "…");
+                        await sleep(120);
+                        const batchMeta = parseDialogues(batches[i]);
+                        const part = buildOfflineResult(task.config.company, task.config.brief, batchMeta);
+                        const extracted = extractFaqsFromText(batches[i], 6);
+                        if (extracted.length) {
+                            const seen = new Set((part.faqs || []).map((f) => (f.question || "").toLowerCase()));
+                            extracted.forEach((f) => {
+                                const k = (f.question || "").toLowerCase();
+                                if (k && !seen.has(k)) { part.faqs.push(f); seen.add(k); }
+                            });
+                            part.summary += "；本批抽取 " + extracted.length + " 条 FAQ";
+                        }
+                        parts.push(part);
+                    }
+                    data = mergeAnalysisResults(parts, task.config.company, task.config.brief, meta, "offline-batch");
                 } else {
                     try {
-                        data = await analyzeWithAPI(task, task.input, meta);
+                        const parts = [];
+                        for (let i = 0; i < batches.length; i++) {
+                            const pct = 18 + Math.floor(((i + 1) / batches.length) * 70);
+                            await updateTaskProgress(taskId, "scene", pct,
+                                "API 分批分析 " + (i + 1) + "/" + batches.length + "…");
+                            const batchMeta = parseDialogues(batches[i]);
+                            const part = await analyzeWithAPI(task, batches[i], batchMeta);
+                            parts.push(part);
+                        }
+                        data = mergeAnalysisResults(parts, task.config.company, task.config.brief, meta, "api-batch");
                     } catch (err) {
                         console.warn(err);
-                        banner("API 暂不可用（" + (err && err.message ? err.message : "timeout") + "），已自动切换离线演示。", "warn");
-                        await updateTaskProgress(taskId, "scene", 45, "API 失败，切换离线演示…");
-                        await sleep(200);
-                        await updateTaskProgress(taskId, "faq", 80, "离线演示生成中…");
-                        data = buildOfflineResult(task.config.company, task.config.brief, meta);
+                        banner("API 暂不可用（" + (err && err.message ? err.message : "timeout") + "），已自动切换离线分批演示。", "warn");
+                        const parts = [];
+                        for (let i = 0; i < batches.length; i++) {
+                            const pct = 30 + Math.floor(((i + 1) / batches.length) * 55);
+                            await updateTaskProgress(taskId, "faq", pct, "离线分批 " + (i + 1) + "/" + batches.length + "…");
+                            await sleep(100);
+                            const part = buildOfflineResult(task.config.company, task.config.brief, parseDialogues(batches[i]));
+                            const extracted = extractFaqsFromText(batches[i], 6);
+                            if (extracted.length) {
+                                const seen = new Set((part.faqs || []).map((f) => (f.question || "").toLowerCase()));
+                                extracted.forEach((f) => {
+                                    const k = (f.question || "").toLowerCase();
+                                    if (k && !seen.has(k)) { part.faqs.push(f); seen.add(k); }
+                                });
+                            }
+                            parts.push(part);
+                        }
+                        data = mergeAnalysisResults(parts, task.config.company, task.config.brief, meta, "offline-batch-fallback");
                         data.meta.fallbackFromApiError = String(err && err.message || err);
                     }
                 }
 
-                await updateTaskProgress(taskId, "review", 96, "正在写入任务结果…");
+                await updateTaskProgress(taskId, "review", 96, "正在汇总 " + batches.length + " 批结果…");
                 task.result = data;
                 task.status = "done";
-                task.progress = { step: "review", pct: 100, message: "任务完成" };
+                task.progress = { step: "review", pct: 100, message: "任务完成（" + batches.length + " 批）" };
                 task.finishedAt = nowISO();
                 task.error = "";
                 saveTasks();
                 renderTaskList();
                 renderDetail();
-                banner("任务完成：" + task.name + "（" + ((data.scenarios || []).length) + " 场景 / " + ((data.faqs || []).length) + " FAQ）", "ok");
-                toast("任务完成 · 可在中间列表随时回看历史");
+                banner("任务完成：" + task.name + "（" + batches.length + " 批 / " + ((data.scenarios || []).length) + " 场景 / " + ((data.faqs || []).length) + " FAQ）", "ok");
+                toast("任务完成 · 已分批处理并汇总");
             } catch (e) {
                 task.status = "failed";
                 task.error = e && e.message ? e.message : String(e);
@@ -942,8 +1155,10 @@
                 toast("任务失败：" + task.error);
             } finally {
                 running = false;
-                btn.disabled = false;
-                btn.textContent = prevLabel || "创建并开始任务";
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = prevLabel || "创建并开始任务";
+                }
             }
         }
 
@@ -1006,10 +1221,12 @@
                 let note = "";
                 if (body.length > MAX_INPUT_CHARS) {
                     body = body.slice(0, MAX_INPUT_CHARS);
-                    note = "（已截断至 " + MAX_INPUT_CHARS + " 字）";
+                    note = "（超过硬上限，已限制至 " + MAX_INPUT_CHARS + " 字）";
                 }
+                const batchHint = Math.max(1, Math.ceil(body.length / BATCH_CHARS));
+                if (batchHint > 1) note += (note ? " " : "") + "· 将分 " + batchHint + " 批处理（不截断会话）";
                 $("chatInput").value = body;
-                $("fileName").textContent = "已选择：" + file.name + " · " + meta + note;
+                $("fileName").textContent = "已选择：" + file.name + " · " + meta + (note ? " " + note : "");
                 if (!$("taskName").value.trim()) $("taskName").value = file.name.replace(/\.[^.]+$/, "") + "-冷启动";
                 refreshInputStats();
                 banner("文件解析完成，可点击「创建并开始任务」。", "ok");
